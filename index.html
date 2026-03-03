@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MindRouter - Open-Source LLM Inference Load Balancer</title>
+    <meta name="description" content="MindRouter is an open-source LLM inference load balancer with OpenAI, Ollama, and Anthropic API compatibility. Route to vLLM and Ollama backends with intelligent scheduling.">
+    <meta property="og:title" content="MindRouter - Open-Source LLM Inference Load Balancer">
+    <meta property="og:description" content="Route LLM inference across GPU backends with protocol translation, fair-share scheduling, and full observability.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mindrouter.ai">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- ====================================================================== -->
+    <!-- Navbar                                                                  -->
+    <!-- ====================================================================== -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#telemetry">Telemetry</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#docs">Docs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Contact</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content">
+
+    <!-- ====================================================================== -->
+    <!-- Hero: Token Flow Animation                                              -->
+    <!-- ====================================================================== -->
+    <section class="hero-section">
+        <div style="overflow:hidden; background:#0a0e1a;">
+            <div style="background:#0d1225; border-bottom:1px solid #1a2040; color:#8892b0; padding:0.5rem 1rem; font-size:0.85rem;">
+                <i class="bi bi-activity"></i> Token Flow &mdash; Simulated Cluster Throughput
+            </div>
+            <div style="position:relative; height:280px;">
+                <canvas id="tokenFlowCanvas" style="width:100%; height:100%; display:block;"
+                        role="img" aria-label="Animated visualization of token flow through the inference cluster. Particles flow from request sources through the MindRouter hub to backend servers."></canvas>
+                <!-- Overlay stats -->
+                <div id="flowStats" style="position:absolute; top:2px; left:50%; transform:translateX(-50%); text-align:center; pointer-events:none;" aria-live="polite" aria-atomic="true">
+                    <div style="font-size:2rem; font-weight:700; color:#64ffda; line-height:1; text-shadow:0 0 20px rgba(100,255,218,0.4);">
+                        <span id="tpsValue">0</span>
+                        <span style="font-size:0.9rem; font-weight:400; color:#8892b0;"> tok/s</span>
+                    </div>
+                    <div style="font-size:0.8rem; color:#5a6380; margin-top:4px;">
+                        <span id="rpmValue">0</span> requests/min
+                        &nbsp;&middot;&nbsp;
+                        <span id="activeValue">0</span> active
+                    </div>
+                </div>
+                <div id="flowStatsSR" class="sr-only" aria-live="polite" role="status"></div>
+                <div id="idleLabel" style="position:absolute; bottom:12px; left:16px; font-size:0.75rem; color:#3a4060; pointer-events:none; display:none;" role="status">
+                    Waiting for inference requests...
+                </div>
+            </div>
+            <!-- Total tokens counter -->
+            <div class="text-center" style="background:#0a0e1a; padding:10px 0 14px;">
+                <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2.5px; color: #8892b0;">Total Tokens Served</div>
+                <div id="total-tokens-counter" style="font-size: 2.2rem; font-weight: 600; color: rgba(100,255,218,0.55); font-family: 'JetBrains Mono', monospace; line-height: 1.1;">
+                    512,847,293
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero text overlay -->
+        <div style="background: linear-gradient(180deg, #0a0e1a 0%, #0d1225 100%); padding: 3rem 0 4rem;">
+            <div class="container text-center">
+                <h1 style="font-size:2.8rem; font-weight:800; color:#e9ecef; letter-spacing:-1px;"><i class="bi bi-router" style="color:#64ffda;"></i> MindRouter</h1>
+                <h2 style="font-size:1.8rem; font-weight:600; color:#8892b0; margin-top:0.5rem;">Open-Source LLM Inference Load Balancer</h2>
+                <p style="font-size:1.15rem; color:#8892b0; max-width:640px; margin:1rem auto 2rem;">
+                    Route inference requests across GPU backends with protocol translation, fair-share scheduling, and full observability. Supports OpenAI, Ollama, and Anthropic APIs.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="https://github.com/ui-insight/MindRouter" class="btn btn-lg px-4" style="background:#64ffda; color:#0a0e1a; font-weight:600;" target="_blank">
+                        <i class="bi bi-github"></i> Get Started
+                    </a>
+                    <a href="documentation.html" class="btn btn-lg btn-outline-light px-4">
+                        <i class="bi bi-book"></i> Documentation
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Stats Bar                                                               -->
+    <!-- ====================================================================== -->
+    <section class="py-4" style="background: var(--mr-sidebar-bg);">
+        <div class="container">
+            <div class="row row-cols-2 row-cols-md-5 g-3 stats-bar">
+                <div class="col">
+                    <div class="card card-stat success h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-1"><i class="bi bi-hdd-rack" style="font-size:1.8rem; color:#198754;"></i></div>
+                            <div class="text-muted" style="font-size:0.85rem;">Multi-Backend<br>Load Balancing</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card card-stat primary h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-1"><i class="bi bi-translate" style="font-size:1.8rem; color:#0d6efd;"></i></div>
+                            <div class="text-muted" style="font-size:0.85rem;">3 API Protocols<br>OpenAI &middot; Ollama &middot; Anthropic</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card card-stat info h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-1"><i class="bi bi-gpu-card" style="font-size:1.8rem; color:#0dcaf0;"></i></div>
+                            <div class="text-muted" style="font-size:0.85rem;">GPU Cluster<br>Management</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card card-stat warning h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-1"><i class="bi bi-shield-check" style="font-size:1.8rem; color:#ffc107;"></i></div>
+                            <div class="text-muted" style="font-size:0.85rem;">Fair-Share<br>Scheduling</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card card-stat danger h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-1"><i class="bi bi-unlock" style="font-size:1.8rem; color:#dc3545;"></i></div>
+                            <div class="text-muted" style="font-size:0.85rem;">Open Source<br>Apache 2.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Features Gallery                                                        -->
+    <!-- ====================================================================== -->
+    <section id="features">
+    <div class="features-showcase">
+    <div class="container py-5">
+
+        <!-- Section Header -->
+        <div class="text-center mb-5">
+            <h2 class="fw-bold" style="font-size:2.2rem;">Everything You Need for LLM Inference</h2>
+            <p class="text-muted mx-auto" style="max-width:640px;">MindRouter provides a complete platform for running, managing, and integrating large language models &mdash; from a browser-based chat to full OpenAI, Ollama, and Anthropic API compatibility.</p>
+        </div>
+
+        <!-- Feature 1: API Usage -->
+        <div class="row align-items-center mb-5 g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-primary bg-opacity-10 text-primary mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-braces"></i> Multi-API Support</span>
+                <h3 class="fw-bold mt-2">OpenAI, Ollama &amp; Anthropic APIs</h3>
+                <p class="text-muted">MindRouter speaks three API protocols natively. Use the OpenAI, Ollama, or Anthropic SDK of your choice &mdash; MindRouter translates between them and routes to the best available backend.</p>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Full <code>/v1/chat/completions</code> OpenAI compatibility</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Native Ollama API (<code>/api/chat</code>, <code>/api/generate</code>, <code>/api/tags</code>)</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Anthropic Messages API (<code>/v1/messages</code>)</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Streaming, tool calling &amp; structured output across all APIs</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Image, multimodal &amp; embedding support</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="rounded-3 shadow-lg overflow-hidden" style="background:#1e1e2e; border:1px solid #313244;">
+                    <div class="d-flex align-items-center px-3 py-2" style="background:#181825; border-bottom:1px solid #313244;">
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f38ba8; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#a6e3a1; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f9e2af; display:inline-block; margin-right:6px;"></span>
+                        <span class="ms-2" style="font-size:0.75rem; color:#6c7086;">curl &mdash; Chat Completions</span>
+                    </div>
+                    <pre class="mb-0 p-3" style="background:transparent; color:#cdd6f4; font-size:0.82rem; line-height:1.6; overflow-x:auto;"><code><span style="color:#89b4fa;">curl</span> -X POST https://your-server.example.com/v1/chat/completions \
+  -H <span style="color:#a6e3a1;">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span style="color:#a6e3a1;">"Content-Type: application/json"</span> \
+  -d <span style="color:#a6e3a1;">'{
+    "model": "openai/gpt-oss-20b",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Explain quantum computing in 3 sentences."}
+    ],
+    "temperature": 0.7,
+    "max_tokens": 256
+  }'</span></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 2: Python SDK -->
+        <div class="row align-items-center mb-5 g-4 flex-lg-row-reverse">
+            <div class="col-lg-6">
+                <span class="badge bg-warning bg-opacity-10 text-warning mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-filetype-py"></i> Python Integration</span>
+                <h3 class="fw-bold mt-2">Works with the OpenAI Python SDK</h3>
+                <p class="text-muted">Change two lines of code &mdash; <code>base_url</code> and <code>api_key</code> &mdash; and your existing OpenAI Python code works instantly with MindRouter. No new libraries to learn.</p>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Use <code>openai</code> Python package as-is</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Async support with <code>AsyncOpenAI</code></li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Streaming with server-sent events</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Compatible with LangChain, LlamaIndex, etc.</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="rounded-3 shadow-lg overflow-hidden" style="background:#1e1e2e; border:1px solid #313244;">
+                    <div class="d-flex align-items-center px-3 py-2" style="background:#181825; border-bottom:1px solid #313244;">
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f38ba8; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#a6e3a1; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f9e2af; display:inline-block; margin-right:6px;"></span>
+                        <span class="ms-2" style="font-size:0.75rem; color:#6c7086;">example.py</span>
+                    </div>
+                    <pre class="mb-0 p-3" style="background:transparent; color:#cdd6f4; font-size:0.82rem; line-height:1.6; overflow-x:auto;"><code><span style="color:#cba6f7;">from</span> <span style="color:#89b4fa;">openai</span> <span style="color:#cba6f7;">import</span> OpenAI
+
+client = OpenAI(
+    <span style="color:#fab387;">base_url</span>=<span style="color:#a6e3a1;">"https://your-server.example.com/v1"</span>,
+    <span style="color:#fab387;">api_key</span>=<span style="color:#a6e3a1;">"YOUR_API_KEY"</span>,
+)
+
+response = client.chat.completions.create(
+    <span style="color:#fab387;">model</span>=<span style="color:#a6e3a1;">"openai/gpt-oss-20b"</span>,
+    <span style="color:#fab387;">messages</span>=[
+        {<span style="color:#a6e3a1;">"role"</span>: <span style="color:#a6e3a1;">"user"</span>,
+         <span style="color:#a6e3a1;">"content"</span>: <span style="color:#a6e3a1;">"Write a haiku about GPUs."</span>}
+    ],
+    <span style="color:#fab387;">stream</span>=<span style="color:#fab387;">True</span>,
+)
+
+<span style="color:#cba6f7;">for</span> chunk <span style="color:#cba6f7;">in</span> response:
+    <span style="color:#89b4fa;">print</span>(chunk.choices[<span style="color:#fab387;">0</span>].delta.content, <span style="color:#fab387;">end</span>=<span style="color:#a6e3a1;">""</span>)</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 3: Chat Interface -->
+        <div class="row align-items-center mb-5 g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-success bg-opacity-10 text-success mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-chat-dots"></i> Built-in Chat</span>
+                <h3 class="fw-bold mt-2">Interactive Chat Interface</h3>
+                <p class="text-muted">No setup required &mdash; just log in and start chatting. MindRouter includes a full-featured web chat with markdown rendering, code highlighting, file uploads, conversation history, and model switching.</p>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Real-time streaming responses</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Syntax-highlighted code blocks</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>File &amp; image uploads</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Persistent conversation history</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Switch models mid-conversation</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Thinking / reasoning mode</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Web search integration</li>
+                </ul>
+                <a href="https://github.com/ui-insight/MindRouter" class="btn btn-success mt-2" target="_blank"><i class="bi bi-github"></i> Deploy Your Own</a>
+            </div>
+            <div class="col-lg-6">
+                <!-- Chat UI mockup -->
+                <div class="rounded-3 shadow-lg overflow-hidden chat-mockup">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 chat-mockup-header">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-chat-dots text-primary me-2"></i>
+                            <span class="fw-semibold" style="font-size:0.9rem;">MindRouter Chat</span>
+                        </div>
+                        <span class="badge bg-secondary" style="font-size:0.7rem;">openai/gpt-oss-20b</span>
+                    </div>
+                    <div class="p-3 chat-mockup-body" style="min-height:240px;">
+                        <div class="d-flex justify-content-end mb-3">
+                            <div class="rounded-3 px-3 py-2 chat-mockup-user" style="max-width:80%; font-size:0.85rem;">
+                                Write a Python function that finds prime numbers using the Sieve of Eratosthenes.
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-start mb-2">
+                            <div class="rounded-3 px-3 py-2 chat-mockup-assistant" style="max-width:85%; font-size:0.85rem;">
+                                <p class="mb-2">Here's an efficient implementation:</p>
+                                <div class="rounded-2 p-2 mb-2" style="background:#1e1e2e; color:#cdd6f4; font-size:0.78rem; font-family:monospace; line-height:1.5;">
+                                    <span style="color:#cba6f7;">def</span> <span style="color:#89b4fa;">sieve</span>(n):<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;s = [<span style="color:#fab387;">True</span>]*(n+<span style="color:#fab387;">1</span>)<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;s[:<span style="color:#fab387;">2</span>] = <span style="color:#fab387;">False</span>, <span style="color:#fab387;">False</span><br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#cba6f7;">for</span> i <span style="color:#cba6f7;">in</span> <span style="color:#89b4fa;">range</span>(<span style="color:#fab387;">2</span>, <span style="color:#89b4fa;">int</span>(n**<span style="color:#fab387;">0.5</span>)+<span style="color:#fab387;">1</span>):<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#cba6f7;">if</span> s[i]:<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s[i*i::i] = [<span style="color:#fab387;">False</span>]*<span style="color:#89b4fa;">len</span>(s[i*i::i])<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#cba6f7;">return</span> [i <span style="color:#cba6f7;">for</span> i, p <span style="color:#cba6f7;">in</span> <span style="color:#89b4fa;">enumerate</span>(s) <span style="color:#cba6f7;">if</span> p]
+                                </div>
+                                <p class="mb-0 text-muted" style="font-size:0.78rem;">This runs in O(n log log n) time complexity...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center px-3 py-2 chat-mockup-footer">
+                        <div class="flex-grow-1 rounded-pill px-3 py-1 chat-mockup-input" style="font-size:0.82rem;">
+                            Type a message...
+                        </div>
+                        <button class="btn btn-primary btn-sm rounded-pill ms-2 px-3"><i class="bi bi-send"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 4: Tool Calling -->
+        <div class="row align-items-center mb-5 g-4 flex-lg-row-reverse">
+            <div class="col-lg-6">
+                <span class="badge bg-info bg-opacity-10 text-info mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-tools"></i> Tool Calling</span>
+                <h3 class="fw-bold mt-2">Native Function &amp; Tool Calling</h3>
+                <p class="text-muted">Build AI agents and agentic workflows. MindRouter supports the OpenAI tool calling protocol, enabling models to invoke functions, query databases, call APIs, and orchestrate complex multi-step tasks.</p>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>OpenAI-compatible <code>tools</code> parameter</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Parallel tool calls supported</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Works with LangChain agents</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Structured JSON Schema outputs</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="rounded-3 shadow-lg overflow-hidden" style="background:#1e1e2e; border:1px solid #313244;">
+                    <div class="d-flex align-items-center px-3 py-2" style="background:#181825; border-bottom:1px solid #313244;">
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f38ba8; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#a6e3a1; display:inline-block; margin-right:6px;"></span>
+                        <span style="width:12px; height:12px; border-radius:50%; background:#f9e2af; display:inline-block; margin-right:6px;"></span>
+                        <span class="ms-2" style="font-size:0.75rem; color:#6c7086;">tool_calling.py</span>
+                    </div>
+                    <pre class="mb-0 p-3" style="background:transparent; color:#cdd6f4; font-size:0.82rem; line-height:1.6; overflow-x:auto;"><code>response = client.chat.completions.create(
+    <span style="color:#fab387;">model</span>=<span style="color:#a6e3a1;">"openai/gpt-oss-20b"</span>,
+    <span style="color:#fab387;">messages</span>=[{<span style="color:#a6e3a1;">"role"</span>: <span style="color:#a6e3a1;">"user"</span>,
+               <span style="color:#a6e3a1;">"content"</span>: <span style="color:#a6e3a1;">"What's the weather in Moscow, ID?"</span>}],
+    <span style="color:#fab387;">tools</span>=[{
+        <span style="color:#a6e3a1;">"type"</span>: <span style="color:#a6e3a1;">"function"</span>,
+        <span style="color:#a6e3a1;">"function"</span>: {
+            <span style="color:#a6e3a1;">"name"</span>: <span style="color:#a6e3a1;">"get_weather"</span>,
+            <span style="color:#a6e3a1;">"description"</span>: <span style="color:#a6e3a1;">"Get current weather"</span>,
+            <span style="color:#a6e3a1;">"parameters"</span>: {
+                <span style="color:#a6e3a1;">"type"</span>: <span style="color:#a6e3a1;">"object"</span>,
+                <span style="color:#a6e3a1;">"properties"</span>: {
+                    <span style="color:#a6e3a1;">"city"</span>: {<span style="color:#a6e3a1;">"type"</span>: <span style="color:#a6e3a1;">"string"</span>}
+                }
+            }
+        }
+    }],
+)</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 5: Translation Architecture -->
+        <div class="row align-items-center mb-5 g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-opacity-10 mb-2 px-3 py-2" style="font-size:0.8rem; background:rgba(111,66,193,0.1); color:#6f42c1;"><i class="bi bi-translate"></i> Translation Architecture</span>
+                <h3 class="fw-bold mt-2">Universal Protocol Translation</h3>
+                <p class="text-muted">MindRouter's innovative translation layer is the engine behind its flexibility. Rather than locking you into a single API format, it translates seamlessly between <strong>OpenAI</strong>, <strong>Ollama</strong>, and <strong>Anthropic</strong> protocols &mdash; on both the client and backend sides.</p>
+                <p class="text-muted">This means any tool, library, or application that speaks one of these protocols can connect to MindRouter &mdash; and MindRouter can route to any backend inference engine, regardless of its native API.</p>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>OpenAI-compatible</strong> &mdash; drop-in for any OpenAI SDK or tool</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Ollama-compatible</strong> &mdash; works with Ollama clients and libraries</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Anthropic-compatible</strong> &mdash; supports Claude SDK and tooling</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>vLLM &amp; Ollama backends</strong> &mdash; route to any engine transparently</li>
+                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Dozens of models</strong> &mdash; deploy and serve cutting-edge models instantly</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="rounded-3 shadow-lg overflow-hidden" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border:1px solid #2a2a4a; padding:2rem;">
+                    <div class="text-center mb-3" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:2px; color:#6c7086;">Translation Architecture</div>
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <div class="rounded-2 px-3 py-2 text-center" style="background:rgba(100,255,218,0.08); border:1px solid rgba(100,255,218,0.25); min-width:90px;">
+                            <div style="font-size:1.2rem; color:#64ffda;"><i class="bi bi-braces"></i></div>
+                            <div style="font-size:0.72rem; color:#64ffda; font-weight:600;">OpenAI</div>
+                            <div style="font-size:0.65rem; color:#5a6380;">Client SDK</div>
+                        </div>
+                        <div class="rounded-2 px-3 py-2 text-center" style="background:rgba(130,170,255,0.08); border:1px solid rgba(130,170,255,0.25); min-width:90px;">
+                            <div style="font-size:1.2rem; color:#82aaff;"><i class="bi bi-box"></i></div>
+                            <div style="font-size:0.72rem; color:#82aaff; font-weight:600;">Ollama</div>
+                            <div style="font-size:0.65rem; color:#5a6380;">Client SDK</div>
+                        </div>
+                        <div class="rounded-2 px-3 py-2 text-center" style="background:rgba(247,181,126,0.08); border:1px solid rgba(247,181,126,0.25); min-width:90px;">
+                            <div style="font-size:1.2rem; color:#f7b57e;"><i class="bi bi-chat-square-text"></i></div>
+                            <div style="font-size:0.72rem; color:#f7b57e; font-weight:600;">Anthropic</div>
+                            <div style="font-size:0.65rem; color:#5a6380;">Client SDK</div>
+                        </div>
+                    </div>
+                    <div class="text-center mb-2" style="color:#3a4060; font-size:1.2rem;">
+                        <i class="bi bi-chevron-down"></i> <i class="bi bi-chevron-down"></i> <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="rounded-3 mx-auto px-4 py-3 text-center mb-2" style="background: linear-gradient(135deg, rgba(100,255,218,0.12) 0%, rgba(130,170,255,0.12) 100%); border:1px solid rgba(100,255,218,0.3); max-width:280px;">
+                        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1.5px; color:#5a6380;">Canonical Schema</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#64ffda;"><i class="bi bi-arrow-left-right"></i> MindRouter</div>
+                        <div style="font-size:0.7rem; color:#8892b0;">Translate &middot; Route &middot; Balance</div>
+                    </div>
+                    <div class="text-center mb-2" style="color:#3a4060; font-size:1.2rem;">
+                        <i class="bi bi-chevron-down"></i> <i class="bi bi-chevron-down"></i> <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                        <div class="rounded-2 px-3 py-2 text-center" style="background:rgba(166,227,161,0.08); border:1px solid rgba(166,227,161,0.25); min-width:120px;">
+                            <div style="font-size:1.2rem; color:#a6e3a1;"><i class="bi bi-lightning-charge"></i></div>
+                            <div style="font-size:0.72rem; color:#a6e3a1; font-weight:600;">vLLM</div>
+                            <div style="font-size:0.65rem; color:#5a6380;">High-throughput</div>
+                        </div>
+                        <div class="rounded-2 px-3 py-2 text-center" style="background:rgba(130,170,255,0.08); border:1px solid rgba(130,170,255,0.25); min-width:120px;">
+                            <div style="font-size:1.2rem; color:#82aaff;"><i class="bi bi-box"></i></div>
+                            <div style="font-size:0.72rem; color:#82aaff; font-weight:600;">Ollama</div>
+                            <div style="font-size:0.65rem; color:#5a6380;">Flexible serving</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 6: Docs & Blog -->
+        <div class="row align-items-center mb-5 g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-danger bg-opacity-10 text-danger mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-book"></i> Documentation &amp; Blog</span>
+                <h3 class="fw-bold mt-2">Comprehensive Docs &amp; Blog</h3>
+                <p class="text-muted">Everything you need to get started and go deep. The documentation covers API endpoints, authentication, model capabilities, rate limits, and integration guides. The blog features updates, tutorials, and best practices.</p>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="documentation.html" class="btn btn-outline-primary"><i class="bi bi-book"></i> Documentation</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="rounded-3 shadow-lg overflow-hidden docs-mockup">
+                    <div class="d-flex align-items-center px-3 py-2 docs-mockup-header">
+                        <i class="bi bi-book text-primary me-2"></i>
+                        <span class="fw-semibold" style="font-size:0.9rem;">MindRouter Documentation</span>
+                    </div>
+                    <div class="p-3 docs-mockup-body" style="font-size:0.82rem;">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-journal-code text-primary me-2"></i>
+                                <strong>API Reference</strong>
+                            </div>
+                            <div class="ms-4 text-muted">Chat Completions &middot; Embeddings &middot; Models &middot; Authentication</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-rocket-takeoff text-success me-2"></i>
+                                <strong>Getting Started</strong>
+                            </div>
+                            <div class="ms-4 text-muted">Quick Start Guide &middot; Python SDK &middot; cURL Examples &middot; Rate Limits</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-puzzle text-warning me-2"></i>
+                                <strong>Integrations</strong>
+                            </div>
+                            <div class="ms-4 text-muted">LangChain &middot; LlamaIndex &middot; Continue.dev &middot; Open WebUI</div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-gear text-secondary me-2"></i>
+                                <strong>Advanced</strong>
+                            </div>
+                            <div class="ms-4 text-muted">Tool Calling &middot; Structured Output &middot; Streaming &middot; Multimodal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 7: AI Sovereignty -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="rounded-3 shadow-lg overflow-hidden" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border:1px solid rgba(255,255,255,0.08);">
+                    <div class="row g-0 align-items-center">
+                        <div class="col-lg-7 p-4 p-lg-5">
+                            <span class="badge mb-3 px-3 py-2" style="font-size:0.8rem; background:rgba(255,215,0,0.15); color:#ffd700; border:1px solid rgba(255,215,0,0.3);"><i class="bi bi-shield-lock-fill"></i> Institutional AI Sovereignty</span>
+                            <h3 class="fw-bold text-white mt-2" style="font-size:1.6rem;">Your AI. Your Hardware. Your Control.</h3>
+                            <p style="color:rgba(255,255,255,0.75); font-size:0.95rem; line-height:1.7;">Every model served by MindRouter runs on <strong style="color:#fff;">University-owned and University-managed GPUs</strong>. No data leaves institutional infrastructure. No third-party cloud providers process your prompts. No external APIs see your research, coursework, or sensitive data.</p>
+                            <p style="color:rgba(255,255,255,0.65); font-size:0.88rem; line-height:1.7;">This isn't just a cost decision &mdash; it's a strategic one. Institutional AI sovereignty means full control over which models are deployed, how they behave, and where data flows.</p>
+                            <div class="row g-3 mt-3">
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-shield-lock text-warning me-2 mt-1" style="font-size:1.1rem;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Data Security</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">Prompts and responses never leave University infrastructure. Full FERPA and research data compliance.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-speedometer text-info me-2 mt-1" style="font-size:1.1rem;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Speed &amp; Latency</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">On-premise GPUs eliminate network round-trips to distant cloud regions.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-lightning-charge text-success me-2 mt-1" style="font-size:1.1rem;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Power &amp; Sustainability</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">Direct visibility into energy consumption per model and per request.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-sliders text-danger me-2 mt-1" style="font-size:1.1rem;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Model Control</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">Choose exactly which models to deploy, audit their behavior, and update on your own schedule.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-bar-chart text-primary me-2 mt-1" style="font-size:1.1rem;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Full Observability</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">Complete audit trail of every request. GPU metrics, token usage, and cost accounting.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-currency-dollar me-2 mt-1" style="font-size:1.1rem; color:#a6e3a1;"></i>
+                                        <div>
+                                            <div class="fw-semibold text-white" style="font-size:0.85rem;">Predictable Costs</div>
+                                            <div style="color:rgba(255,255,255,0.55); font-size:0.78rem;">No per-token API bills. Capital investment in GPUs with transparent, fixed operating costs.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5 p-4 p-lg-5 text-center d-none d-lg-block">
+                            <div style="position:relative;">
+                                <div class="rounded-3 p-4" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
+                                    <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:2px; color:rgba(255,255,255,0.3); margin-bottom:1rem;">University GPU Cluster</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex align-items-center rounded-2 px-3 py-2" style="background:rgba(100,255,218,0.06); border:1px solid rgba(100,255,218,0.15);">
+                                            <i class="bi bi-gpu-card me-2" style="color:#64ffda;"></i>
+                                            <div class="text-start flex-grow-1">
+                                                <div style="font-size:0.75rem; color:#64ffda; font-weight:600;">Node 1</div>
+                                                <div style="font-size:0.65rem; color:#5a6380;">4x GPU &middot; gpt-oss-120b</div>
+                                            </div>
+                                            <span class="badge rounded-pill" style="background:rgba(100,255,218,0.2); color:#64ffda; font-size:0.6rem;">ACTIVE</span>
+                                        </div>
+                                        <div class="d-flex align-items-center rounded-2 px-3 py-2" style="background:rgba(130,170,255,0.06); border:1px solid rgba(130,170,255,0.15);">
+                                            <i class="bi bi-gpu-card me-2" style="color:#82aaff;"></i>
+                                            <div class="text-start flex-grow-1">
+                                                <div style="font-size:0.75rem; color:#82aaff; font-weight:600;">Node 2</div>
+                                                <div style="font-size:0.65rem; color:#5a6380;">4x GPU TP &middot; qwen3.5-400b</div>
+                                            </div>
+                                            <span class="badge rounded-pill" style="background:rgba(130,170,255,0.2); color:#82aaff; font-size:0.6rem;">ACTIVE</span>
+                                        </div>
+                                        <div class="d-flex align-items-center rounded-2 px-3 py-2" style="background:rgba(166,227,161,0.06); border:1px solid rgba(166,227,161,0.15);">
+                                            <i class="bi bi-gpu-card me-2" style="color:#a6e3a1;"></i>
+                                            <div class="text-start flex-grow-1">
+                                                <div style="font-size:0.75rem; color:#a6e3a1; font-weight:600;">Node 3</div>
+                                                <div style="font-size:0.65rem; color:#5a6380;">4x GPU &middot; gpt-oss-120b / 20b</div>
+                                            </div>
+                                            <span class="badge rounded-pill" style="background:rgba(166,227,161,0.2); color:#a6e3a1; font-size:0.6rem;">ACTIVE</span>
+                                        </div>
+                                        <div class="d-flex align-items-center rounded-2 px-3 py-2" style="background:rgba(247,181,126,0.06); border:1px solid rgba(247,181,126,0.15);">
+                                            <i class="bi bi-gpu-card me-2" style="color:#f7b57e;"></i>
+                                            <div class="text-start flex-grow-1">
+                                                <div style="font-size:0.75rem; color:#f7b57e; font-weight:600;">Node 4</div>
+                                                <div style="font-size:0.65rem; color:#5a6380;">2x GPU &middot; Multimodal OCR</div>
+                                            </div>
+                                            <span class="badge rounded-pill" style="background:rgba(247,181,126,0.2); color:#f7b57e; font-size:0.6rem;">ACTIVE</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3" style="font-size:0.65rem; color:rgba(255,255,255,0.25);">
+                                        <i class="bi bi-lock-fill"></i> On-premise &middot; No cloud dependencies &middot; Full institutional control
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 8: Telemetry & Monitoring -->
+        <div class="row align-items-center mb-5 g-4" id="telemetry">
+            <div class="col-lg-12">
+                <div class="text-center mb-4">
+                    <span class="badge bg-info bg-opacity-10 text-info mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-graph-up-arrow"></i> Telemetry &amp; Monitoring</span>
+                    <h3 class="fw-bold mt-2">Full Cluster Observability</h3>
+                    <p class="text-muted mx-auto" style="max-width:640px;">Monitor every aspect of your inference cluster in real time &mdash; from GPU utilization and power draw to token throughput and per-request audit trails.</p>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden gallery-card">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-gpu-card text-warning me-2"></i>GPU &amp; Inference Metrics</h6>
+                    </div>
+                    <img src="img/gallery/gpu-metrics.png" alt="GPU metrics dashboard showing utilization, memory, power consumption, and request throughput charts across 38 GPUs" class="card-img-bottom">
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden gallery-card">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-activity text-success me-2"></i>Live Cluster Status</h6>
+                    </div>
+                    <img src="img/gallery/cluster-status.png" alt="Cluster status page showing healthy backends, available models, active users, live token throughput visualization, and total tokens served" class="card-img-bottom">
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden gallery-card">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line text-primary me-2"></i>Token &amp; User Trends</h6>
+                    </div>
+                    <img src="img/gallery/token-trends.png" alt="Token throughput and active user charts with hourly, daily, weekly, monthly, and yearly time ranges" class="card-img-bottom">
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden gallery-card">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text text-danger me-2"></i>Request Audit Log</h6>
+                    </div>
+                    <img src="img/gallery/audit-log.png" alt="Audit log showing per-request details including model, endpoint, status, tokens, and latency with filtering and export options" class="card-img-bottom">
+                </div>
+            </div>
+
+            <div class="col-lg-12">
+                <div class="row g-3 justify-content-center">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-gpu-card text-warning" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">GPU Telemetry</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Utilization, memory, temperature, power draw, and fan speed per GPU with configurable time ranges (1h to 30d)</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-speedometer2 text-info" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Live Throughput</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Real-time token flow visualization, requests per minute, active request counts, and total tokens served</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-journal-text text-danger" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Audit &amp; Export</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Full request audit trail with filtering by user, model, status, and date &mdash; exportable as CSV, JSON, or JSON with content</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 9: Infrastructure -->
+        <div class="row align-items-center g-4">
+            <div class="col-lg-12">
+                <div class="text-center mb-4">
+                    <span class="badge bg-dark bg-opacity-10 text-body mb-2 px-3 py-2" style="font-size:0.8rem;"><i class="bi bi-hdd-rack"></i> Enterprise Infrastructure</span>
+                    <h3 class="fw-bold mt-2">Built for Production</h3>
+                    <p class="text-muted mx-auto" style="max-width:600px;">MindRouter is designed for reliability, observability, and scale &mdash; load balancing across GPU backends with intelligent routing and fair-share scheduling.</p>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-diagram-3 text-primary" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Load Balancing</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Intelligent routing across multiple GPU backends with health checks and failover</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-shield-check text-success" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Fair-Share Scheduling</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Weighted quotas, rate limiting, and fair access across users and groups</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-gpu-card text-warning" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">GPU Monitoring</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Real-time GPU utilization, memory, temperature, and power metrics across the cluster</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-translate text-info" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Protocol Translation</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Seamless translation between OpenAI, Ollama, and vLLM API formats</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-graph-up text-danger" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Observability</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">Prometheus metrics, structured logging, request audit trail, and admin dashboards</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card border-0 shadow-sm h-100 text-center p-3">
+                            <div class="mb-2"><i class="bi bi-key text-secondary" style="font-size:2rem;"></i></div>
+                            <h6 class="fw-bold mb-1">Authentication</h6>
+                            <p class="text-muted mb-0" style="font-size:0.82rem;">API key management, Azure AD SSO, group-based access control, and user quotas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Documentation Teaser                                                    -->
+    <!-- ====================================================================== -->
+    <section id="docs" class="py-5" style="background: var(--mr-sidebar-bg);">
+        <div class="container text-center">
+            <h2 class="fw-bold mb-3">Documentation</h2>
+            <p class="text-muted mx-auto mb-4" style="max-width:600px;">
+                Comprehensive guides covering API endpoints, authentication, model capabilities, rate limits, Python SDK integration, tool calling, structured output, and more.
+            </p>
+            <a href="documentation.html" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-book"></i> View Full Documentation
+            </a>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- GitHub / Open Source                                                     -->
+    <!-- ====================================================================== -->
+    <section id="github" class="py-5">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <h2 class="fw-bold mb-3">Open Source</h2>
+                    <p class="text-muted">MindRouter is open-source software released under the Apache 2.0 license. Clone the repo, deploy on your own infrastructure, and contribute back to the project.</p>
+                    <div class="d-flex gap-2 align-items-center mt-3">
+                        <a href="https://github.com/ui-insight/MindRouter" class="btn btn-dark px-4" target="_blank">
+                            <i class="bi bi-github"></i> View on GitHub
+                        </a>
+                        <span class="badge bg-success px-3 py-2">Apache 2.0</span>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="rounded-3 shadow-lg overflow-hidden" style="background:#1e1e2e; border:1px solid #313244;">
+                        <div class="d-flex align-items-center px-3 py-2" style="background:#181825; border-bottom:1px solid #313244;">
+                            <span style="width:12px; height:12px; border-radius:50%; background:#f38ba8; display:inline-block; margin-right:6px;"></span>
+                            <span style="width:12px; height:12px; border-radius:50%; background:#a6e3a1; display:inline-block; margin-right:6px;"></span>
+                            <span style="width:12px; height:12px; border-radius:50%; background:#f9e2af; display:inline-block; margin-right:6px;"></span>
+                            <span class="ms-2" style="font-size:0.75rem; color:#6c7086;">terminal</span>
+                        </div>
+                        <pre class="mb-0 p-3" style="background:transparent; color:#cdd6f4; font-size:0.85rem; line-height:1.8; overflow-x:auto;"><code><span style="color:#a6e3a1;">$</span> git clone https://github.com/ui-insight/MindRouter.git
+<span style="color:#a6e3a1;">$</span> cd MindRouter
+<span style="color:#a6e3a1;">$</span> docker compose up -d --build
+<span style="color:#6c7086;"># MindRouter is now running at http://localhost:8000</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Contact Form                                                            -->
+    <!-- ====================================================================== -->
+    <section id="contact" class="contact-section py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold">Get in Touch</h2>
+                        <p class="text-muted">Questions about MindRouter? Interested in deploying it at your institution? Drop us a line.</p>
+                    </div>
+                    <form action="https://formspree.io/f/xojnonwg" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="contactName" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="contactName" name="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contactEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="contactEmail" name="email" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="contactInstitution" class="form-label">Institution</label>
+                                <input type="text" class="form-control" id="contactInstitution" name="institution">
+                            </div>
+                            <div class="col-12">
+                                <label for="contactMessage" class="form-label">Message</label>
+                                <textarea class="form-control" id="contactMessage" name="message" rows="5" required></textarea>
+                            </div>
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="bi bi-send"></i> Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- ====================================================================== -->
+    <!-- Footer                                                                  -->
+    <!-- ====================================================================== -->
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">
+                Open-Source LLM Inference Load Balancer
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp;
+                Apache 2.0 License
+            </p>
+            <div class="d-inline-flex align-items-center gap-2 mt-2">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/NSF_logo.png" alt="NSF" height="20">
+                <small class="text-muted">
+                    This project was developed with support from the National Science Foundation
+                    (<a href="https://www.nsf.gov/awardsearch/show-award?AWD_ID=2427549" class="text-muted">NSF Award #2427549</a>)
+                </small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/token-flow.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
