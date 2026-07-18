@@ -1,0 +1,358 @@
+/* MindRouter Cluster Configurator */
+
+/* Themable palette: dark instrument look in dark mode, full light variant below.
+   The SVG rack diagram gets the same palette from diagTheme() in configurator.js. */
+:root,
+[data-bs-theme="dark"] {
+    --cfg-panel-bg: #0a0e1a;
+    --cfg-panel-head-bg: #0d1225;
+    --cfg-border: #1a2040;
+    --cfg-border-2: #22305a;
+    --cfg-surface: #101830;
+    --cfg-accent: #64ffda;
+    --cfg-accent-bg: rgba(100, 255, 218, 0.12);
+    --cfg-accent-border: rgba(100, 255, 218, 0.3);
+    --cfg-text: #e9ecef;
+    --cfg-text-2: #8892b0;
+    --cfg-muted: #5a6380;
+    --cfg-faint: #3a4060;
+    --cfg-ring: #1a2040;
+    --cfg-flash: #ffd700;
+    --cfg-spec-border: #131a33;
+    --cfg-glow: rgba(100, 255, 218, 0.35);
+    --cfg-warn-border: #ffd700;
+    --cfg-warn-bg: rgba(255, 215, 0, 0.06);
+    --cfg-warn-text: #d8c27a;
+    --cfg-danger-border: #f38ba8;
+    --cfg-danger-bg: rgba(243, 139, 168, 0.07);
+    --cfg-danger-text: #e8a2b8;
+    --cfg-hint-text: #7ecfbd;
+}
+
+[data-bs-theme="light"] {
+    --cfg-panel-bg: #ffffff;
+    --cfg-panel-head-bg: #f8f9fa;
+    --cfg-border: #dee2e6;
+    --cfg-border-2: #ced4da;
+    --cfg-surface: #f8f9fa;
+    --cfg-accent: #0d9488;
+    --cfg-accent-bg: rgba(13, 148, 136, 0.1);
+    --cfg-accent-border: rgba(13, 148, 136, 0.35);
+    --cfg-text: #212529;
+    --cfg-text-2: #495057;
+    --cfg-muted: #6c757d;
+    --cfg-faint: #adb5bd;
+    --cfg-ring: #e2e8f0;
+    --cfg-flash: #b45309;
+    --cfg-spec-border: #e9ecef;
+    --cfg-glow: transparent;
+    --cfg-warn-border: #d97706;
+    --cfg-warn-bg: rgba(217, 119, 6, 0.08);
+    --cfg-warn-text: #92400e;
+    --cfg-danger-border: #dc3545;
+    --cfg-danger-bg: rgba(220, 53, 69, 0.07);
+    --cfg-danger-text: #a02334;
+    --cfg-hint-text: #0f766e;
+}
+
+.config-hero {
+    background: linear-gradient(180deg, #0a0e1a 0%, #0d1225 100%);
+    padding: 2.5rem 0 2rem;
+}
+[data-bs-theme="light"] .config-hero {
+    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+    border-bottom: 1px solid #e9ecef;
+}
+.config-hero h1 {
+    color: var(--cfg-text);
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+.config-hero p {
+    color: var(--cfg-text-2);
+    max-width: 720px;
+}
+.cfg-accent-icon { color: var(--cfg-accent); }
+.config-disclaimer {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    max-width: 860px;
+    background: var(--cfg-accent-bg);
+    border: 1px solid var(--cfg-accent-border);
+    border-radius: 0.6rem;
+    padding: 0.7rem 1rem;
+    color: var(--cfg-text-2);
+    font-size: 0.85rem;
+    line-height: 1.55;
+}
+.config-disclaimer .bi { color: var(--cfg-accent); font-size: 1.05rem; margin-top: 0.1rem; }
+.config-disclaimer strong { color: var(--cfg-text); }
+.config-data-badge {
+    font-size: 0.75rem;
+    color: var(--cfg-muted);
+    border: 1px solid var(--cfg-border);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    display: inline-block;
+    background: var(--cfg-panel-head-bg);
+}
+.config-data-badge .bi { color: var(--cfg-accent); }
+
+.config-section {
+    background: var(--mr-sidebar-bg);
+}
+
+/* Instrument panels */
+.config-panel {
+    background: var(--cfg-panel-bg);
+    border: 1px solid var(--cfg-border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+[data-bs-theme="light"] .config-panel {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.config-panel-head {
+    background: var(--cfg-panel-head-bg);
+    border-bottom: 1px solid var(--cfg-border);
+    color: var(--cfg-text-2);
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.config-panel-head .bi { color: var(--cfg-accent); }
+.config-panel-body { padding: 1rem; }
+
+/* Preset chips */
+.preset-btn {
+    background: var(--cfg-surface);
+    border: 1px solid var(--cfg-border-2);
+    color: var(--cfg-text-2);
+    font-size: 0.72rem;
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.preset-btn:hover { border-color: var(--cfg-accent); color: var(--cfg-accent); }
+.preset-btn.active {
+    background: var(--cfg-accent-bg);
+    border-color: var(--cfg-accent);
+    color: var(--cfg-accent);
+}
+
+/* Radar */
+#radarSvg { display: block; width: 100%; height: auto; touch-action: none; }
+.radar-ring { fill: none; stroke: var(--cfg-ring); stroke-width: 1; }
+.radar-spoke { stroke: var(--cfg-ring); stroke-width: 1; }
+.radar-poly {
+    fill: var(--cfg-accent-bg);
+    stroke: var(--cfg-accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px var(--cfg-glow));
+}
+.radar-handle {
+    fill: var(--cfg-panel-bg);
+    stroke: var(--cfg-accent);
+    stroke-width: 2.5;
+    cursor: grab;
+    transition: r 0.1s;
+}
+.radar-handle:hover, .radar-handle:focus { stroke-width: 4; outline: none; }
+.radar-handle:focus-visible { stroke: var(--cfg-text); }
+.radar-handle.dragging { cursor: grabbing; }
+.radar-axis-label {
+    fill: var(--cfg-text-2);
+    font-size: 13px;
+    font-weight: 600;
+}
+.radar-axis-value {
+    fill: var(--cfg-accent);
+    font-size: 12.5px;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+}
+.radar-axis-label.flash, .radar-axis-value.flash { fill: var(--cfg-flash); }
+.radar-hint { color: var(--cfg-faint); font-size: 0.72rem; }
+
+/* Feature toggle chips */
+.feature-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: var(--cfg-surface);
+    border: 1px solid var(--cfg-border-2);
+    color: var(--cfg-text-2);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+}
+.feature-chip:hover { border-color: var(--cfg-accent); }
+.feature-chip input { accent-color: var(--cfg-accent); cursor: pointer; }
+.feature-chip.on {
+    background: var(--cfg-accent-bg);
+    border-color: var(--cfg-accent);
+    color: var(--cfg-text);
+}
+.feature-chip .bi { color: var(--cfg-accent); }
+
+/* Fine-tune inputs */
+.cfg-link { color: var(--cfg-accent); font-size: 0.78rem; }
+.cfg-link:hover { color: var(--cfg-accent); }
+.cfg-link-muted { color: var(--cfg-muted); font-size: 0.75rem; }
+.cfg-link-muted:hover { color: var(--cfg-text-2); }
+.finetune-grid label {
+    color: var(--cfg-text-2);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.15rem;
+}
+.finetune-grid .form-control, .finetune-grid .form-select {
+    background: var(--cfg-surface);
+    border-color: var(--cfg-border-2);
+    color: var(--cfg-text);
+    font-size: 0.85rem;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+}
+.finetune-grid .form-control:focus, .finetune-grid .form-select:focus {
+    background: var(--cfg-surface);
+    border-color: var(--cfg-accent);
+    color: var(--cfg-text);
+    box-shadow: 0 0 0 0.15rem var(--cfg-accent-bg);
+}
+
+/* Output column */
+.config-output { position: sticky; top: 76px; }
+.tier-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--cfg-accent);
+    background: var(--cfg-accent-bg);
+    border: 1px solid var(--cfg-accent-border);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+}
+.price-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--cfg-text-2);
+}
+.price-big {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 700;
+    color: var(--cfg-accent);
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    line-height: 1.15;
+    text-shadow: 0 0 18px var(--cfg-glow);
+    transition: opacity 0.15s;
+}
+.price-big.updating { opacity: 0.35; }
+.power-line {
+    color: var(--cfg-text);
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+.power-line .bi { color: var(--cfg-warn-border); }
+.power-note { color: var(--cfg-muted); font-size: 0.72rem; }
+
+.config-warn {
+    border-left: 3px solid var(--cfg-warn-border);
+    background: var(--cfg-warn-bg);
+    color: var(--cfg-warn-text);
+    font-size: 0.78rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0 0.35rem 0.35rem 0;
+    margin-top: 0.4rem;
+}
+.config-warn.danger {
+    border-left-color: var(--cfg-danger-border);
+    background: var(--cfg-danger-bg);
+    color: var(--cfg-danger-text);
+}
+.config-hint {
+    border-left: 3px solid var(--cfg-accent);
+    background: var(--cfg-accent-bg);
+    color: var(--cfg-hint-text);
+    font-size: 0.78rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0 0.35rem 0.35rem 0;
+    margin-top: 0.4rem;
+}
+
+/* Diagram */
+#diagramSvg { display: block; width: 100%; height: auto; }
+
+/* Spec table */
+.spec-list { font-size: 0.83rem; }
+.spec-list .spec-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--cfg-spec-border);
+}
+.spec-list .spec-row:last-child { border-bottom: none; }
+.spec-list .spec-key { color: var(--cfg-text-2); white-space: nowrap; }
+.spec-list .spec-val {
+    color: var(--cfg-text);
+    text-align: right;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    font-size: 0.8rem;
+}
+.spec-list .spec-val .sub { color: var(--cfg-muted); font-size: 0.72rem; }
+
+.alt-head {
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--cfg-muted);
+    margin-bottom: 0.3rem;
+}
+.alt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--cfg-text-2);
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed var(--cfg-spec-border);
+}
+.alt-row:last-child { border-bottom: none; }
+.alt-row .alt-price { color: var(--cfg-text-2); font-family: 'SF Mono', Menlo, monospace; white-space: nowrap; }
+
+.assumptions-text { color: var(--cfg-muted); font-size: 0.72rem; line-height: 1.6; }
+.assumptions-text strong { color: var(--cfg-text-2); }
+
+.copy-spec-btn {
+    background: transparent;
+    border: 1px solid var(--cfg-border-2);
+    color: var(--cfg-text-2);
+    font-size: 0.78rem;
+    border-radius: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    transition: all 0.15s;
+}
+.copy-spec-btn:hover { border-color: var(--cfg-accent); color: var(--cfg-accent); }
+
+.cfg-contact-btn {
+    border: 1px solid var(--cfg-border-2);
+    color: var(--cfg-text-2);
+}
+.cfg-contact-btn:hover { border-color: var(--cfg-accent); color: var(--cfg-accent); }
+
+@media (max-width: 991px) {
+    .config-output { position: static; }
+}

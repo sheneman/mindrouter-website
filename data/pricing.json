@@ -1,0 +1,319 @@
+{
+  "_comment": "Pricing & capability database for the MindRouter Cluster Configurator. Machine-refreshed (see tools/update-pricing.md). All prices USD street-price ranges [low, high], compiled from vendor/reseller listings via live web research. VRAM figures are weights-only unless noted. Perf figures are aggregate batched decode tok/s per GPU on vLLM/SGLang/TRT-LLM-class stacks at interactive SLAs (conservative ends of published benchmarks).",
+  "generated": "2026-07-18",
+  "generated_by": "Live web research: NVIDIA/Supermicro/Thinkmate/WiredZone/AVADirect/Exxact listings; InferenceMAX, MLPerf, LMSYS, DatabaseMart, CloudRift benchmarks; Artificial Analysis Intelligence Index (Jul 2026 snapshot) for model scores.",
+  "currency": "USD",
+
+  "assumptions": {
+    "quantization": "Primary models served in NVFP4/MXFP4 (FP8 where VRAM allows); frontier models ship 4-bit-native",
+    "gpu_power_fraction_nominal": 0.5,
+    "gpu_power_fraction_band": [0.4, 0.65],
+    "_power_note": "Measured serving power: decode ~34-40% of TDP, saturated continuous batching 65-80%; ~50% is the configurator's nominal per user-facing assumption",
+    "platform_power_fraction_band": [0.6, 0.9],
+    "vram_usable_fraction": 0.9,
+    "chat_active_fraction": 0.35,
+    "api_peak_to_avg": 4,
+    "_peak_note": "Production LLM traces show ~3.3x diurnal peak-to-average (Azure trace); 4x is conservative",
+    "api_avg_request_seconds": 6,
+    "per_stream_tok_s": 20,
+    "kv_context_tokens": 8192,
+    "integration_overhead": [1.03, 1.1],
+    "electricity_usd_per_kwh": 0.12
+  },
+
+  "gpus": {
+    "gb10": {
+      "label": "NVIDIA GB10 (DGX Spark)",
+      "vram_gb": 119,
+      "tdp_w": 240,
+      "price": [0, 0],
+      "integrated": true,
+      "notes": "128 GB unified LPDDR5X (273 GB/s), ~119 GB usable; 240 W nameplate system power, ~170 W measured under heavy AI load"
+    },
+    "rtx6000pro": {
+      "label": "RTX Pro 6000 Blackwell (Server) 96 GB",
+      "vram_gb": 96,
+      "tdp_w": 600,
+      "price": [11500, 15000],
+      "notes": "GDDR7-shortage pricing (launched at $8,565; NVIDIA marketplace $13,250 Jul 2026). Passive server card, 400-600 W configurable"
+    },
+    "h200nvl": {
+      "label": "H200 NVL 141 GB",
+      "vram_gb": 141,
+      "tdp_w": 600,
+      "price": [30000, 36000],
+      "notes": "PCIe dual-slot, HBM3e 4.8 TB/s; the 141 GB option for standard Supermicro PCIe chassis"
+    },
+    "b200": {
+      "label": "B200 SXM 180 GB",
+      "vram_gb": 180,
+      "tdp_w": 1000,
+      "price": [35000, 50000],
+      "notes": "Shipping HGX B200 is 180 GB/GPU (1.4 TB per 8-GPU node); sold as systems, per-GPU price is OEM-quote derived"
+    },
+    "b300": {
+      "label": "B300 (Blackwell Ultra) SXM 288 GB",
+      "vram_gb": 288,
+      "tdp_w": 1100,
+      "price": [40000, 55000],
+      "notes": "288 GB HBM3e (~270 GB usable), 2.3 TB per 8-GPU node; ~1,100 W in HGX air-cooled configs (1,400 W in NVL72 liquid)"
+    }
+  },
+
+  "platforms": [
+    {
+      "id": "spark",
+      "label": "NVIDIA DGX Spark",
+      "vendor": "NVIDIA / partners",
+      "sku": "DGX Spark (GB10) or partner equivalent",
+      "class": "desktop",
+      "gpu": "gb10",
+      "max_gpus": 1,
+      "units_max": 4,
+      "tp_units_max": 2,
+      "unit_price": [2999, 4699],
+      "platform_w": 0,
+      "rack_u": 0,
+      "cooling": "air",
+      "notes": "DGX Spark Founders $4,699 (MSRP raised +18% Feb 2026, DRAM shortage); partner GB10 boxes (MSI EdgeXpert, ASUS Ascent GX10) from ~$2,999. Two units pair over 200G ConnectX QSFP; 3+ units cluster via QSFP switch per NVIDIA's Spark Stacking playbooks"
+    },
+    {
+      "id": "sm2u-rtx",
+      "label": "Supermicro 2U GPU server + RTX Pro 6000 Blackwell",
+      "vendor": "Supermicro",
+      "sku": "SYS-212GB-NR (2U, 4x double-width)",
+      "class": "pcie",
+      "gpu": "rtx6000pro",
+      "max_gpus": 4,
+      "base_price": [10000, 16000],
+      "platform_w": 650,
+      "rack_u": 2,
+      "cooling": "air",
+      "notes": "Barebone $4,760 (WiredZone Jul 2026); base price is configured without GPUs (1x Xeon 6700P, 512 GB DDR5, NVMe)"
+    },
+    {
+      "id": "sm4u-rtx",
+      "label": "Supermicro 4U/5U GPU server + RTX Pro 6000 Blackwell",
+      "vendor": "Supermicro",
+      "sku": "AS-4125GS-TNRT2 / SYS-522GA-NRT (8x double-width)",
+      "class": "pcie",
+      "gpu": "rtx6000pro",
+      "max_gpus": 8,
+      "base_price": [25000, 45000],
+      "platform_w": 1200,
+      "rack_u": 4,
+      "cooling": "air",
+      "notes": "Barebones $11.5k-$25k; base price is configured without GPUs (dual EPYC/Xeon, 768 GB-1.5 TB DDR5)"
+    },
+    {
+      "id": "sm4u-h200",
+      "label": "Supermicro 4U/5U GPU server + H200 NVL",
+      "vendor": "Supermicro",
+      "sku": "AS-4125GS-TNRT2 / SYS-522GA-NRT (8x double-width)",
+      "class": "pcie",
+      "gpu": "h200nvl",
+      "max_gpus": 8,
+      "base_price": [25000, 45000],
+      "platform_w": 1200,
+      "rack_u": 4,
+      "cooling": "air"
+    },
+    {
+      "id": "hgx-b200",
+      "label": "Supermicro HGX B200 8-GPU",
+      "vendor": "Supermicro",
+      "sku": "SYS-A22GA-NBRT (10U)",
+      "class": "hgx",
+      "gpu": "b200",
+      "max_gpus": 8,
+      "fixed_gpus": 8,
+      "system_price": [330000, 500000],
+      "platform_w": 3000,
+      "rack_u": 10,
+      "cooling": "air",
+      "notes": "Full system with 8x B200 (1.4 TB HBM3e). Street $330k-$500k; DGX B200 anchors the floor at ~$280k-$320k. 8-16 wk lead times"
+    },
+    {
+      "id": "hgx-b300-lc",
+      "label": "Supermicro HGX B300 8-GPU (liquid-cooled)",
+      "vendor": "Supermicro",
+      "sku": "SYS-422GS-NB3RT-LCC (4U DLC)",
+      "class": "hgx",
+      "gpu": "b300",
+      "max_gpus": 8,
+      "fixed_gpus": 8,
+      "system_price": [400000, 600000],
+      "platform_w": 2000,
+      "rack_u": 4,
+      "cooling": "liquid",
+      "notes": "Quote-only; estimated from the verified air-cooled sibling. Requires rack CDU / facility water (not included)"
+    },
+    {
+      "id": "hgx-b300-air",
+      "label": "Supermicro HGX B300 8-GPU (air-cooled)",
+      "vendor": "Supermicro",
+      "sku": "SYS-822GS-NB3RT (8U)",
+      "class": "hgx",
+      "gpu": "b300",
+      "max_gpus": 8,
+      "fixed_gpus": 8,
+      "system_price": [420000, 550000],
+      "platform_w": 3000,
+      "rack_u": 8,
+      "cooling": "air",
+      "notes": "Verified configured quotes $420k (TurboMaxGPU) to $504k (AVADirect configurator); scalper ceilings to $760k excluded"
+    }
+  ],
+
+  "models": [
+    {
+      "id": "4b",
+      "label": "Small (~4B)",
+      "example": "Gemma 4 E4B",
+      "params_b": 8,
+      "active_b": 4,
+      "intelligence": 18,
+      "fp8_gb": 8,
+      "nvfp4_gb": 4,
+      "kv_gb_per_stream": 0.1,
+      "notes": "Best current ~4B-class model; multimodal. Score is a low-confidence estimate (no AA listing)"
+    },
+    {
+      "id": "20b",
+      "label": "Compact (~20B MoE)",
+      "example": "gpt-oss-20b",
+      "params_b": 21,
+      "active_b": 3.6,
+      "intelligence": 26,
+      "fp8_gb": 21,
+      "nvfp4_gb": 13,
+      "kv_gb_per_stream": 0.2,
+      "notes": "Native MXFP4; unbeatable latency for the footprint"
+    },
+    {
+      "id": "120b",
+      "label": "Fast MoE (~120B)",
+      "example": "gpt-oss-120b",
+      "params_b": 117,
+      "active_b": 5.1,
+      "intelligence": 42,
+      "fp8_gb": 117,
+      "nvfp4_gb": 61,
+      "kv_gb_per_stream": 0.2,
+      "notes": "Native MXFP4, sliding-window attention = tiny KV; batches extremely well. Newer small models score higher but this remains a throughput workhorse"
+    },
+    {
+      "id": "31b",
+      "label": "Capable (~31B)",
+      "example": "Gemma 4 31B",
+      "params_b": 30.7,
+      "active_b": 30.7,
+      "intelligence": 51,
+      "fp8_gb": 31,
+      "nvfp4_gb": 16,
+      "kv_gb_per_stream": 1.0,
+      "notes": "Dense, multimodal (text/image/video), 256K context; most token-efficient of its class"
+    },
+    {
+      "id": "35b",
+      "label": "Fast & capable (35B MoE)",
+      "example": "Qwen3.6-35B-A3B",
+      "params_b": 36,
+      "active_b": 3,
+      "intelligence": 56,
+      "fp8_gb": 36,
+      "nvfp4_gb": 20,
+      "kv_gb_per_stream": 0.4,
+      "notes": "MoE ~3B active: throughput champion of the mid tier; multimodal"
+    },
+    {
+      "id": "27b",
+      "label": "Sharp (27B dense)",
+      "example": "Qwen3.6-27B",
+      "params_b": 27,
+      "active_b": 27,
+      "intelligence": 65,
+      "fp8_gb": 28,
+      "nvfp4_gb": 15,
+      "kv_gb_per_stream": 0.3,
+      "notes": "Best intelligence-per-GB in the open field (AA 37/57 vs frontier); dense so per-GPU throughput is lower than the MoE tiers; multimodal, hybrid linear attention keeps KV small"
+    },
+    {
+      "id": "700b",
+      "label": "Near-frontier (~750B MoE)",
+      "example": "GLM-5.2 (753B)",
+      "params_b": 753,
+      "active_b": 40,
+      "intelligence": 89,
+      "fp8_gb": 753,
+      "nvfp4_gb": 380,
+      "kv_gb_per_stream": 0.3,
+      "notes": "Highest-scoring downloadable open model (AA 51/57), MIT license, 1M context; 4-bit fits one 8-GPU node"
+    },
+    {
+      "id": "3t",
+      "label": "Frontier (2.8T MoE)",
+      "example": "Kimi K3 (2.8T)",
+      "params_b": 2800,
+      "active_b": 50,
+      "intelligence": 100,
+      "fp8_gb": 2800,
+      "nvfp4_gb": 1400,
+      "kv_gb_per_stream": 0.3,
+      "notes": "Open-weight frontier (AA 57.1, #3 overall, Jul 16 2026). Trained quantization-aware in MXFP4: ~1.4 TB weights is the native serving tier; needs an HGX B300-class node minimum"
+    }
+  ],
+
+  "features": {
+    "ocr": {
+      "label": "OCR / Vision",
+      "vram_gb": 8,
+      "model": "PaddleOCR-VL-1.5 (doc parsing) + VLM headroom"
+    },
+    "voice": {
+      "label": "TTS + STT",
+      "vram_gb": 8,
+      "model": "Kokoro-82M TTS + Whisper large-v3-turbo"
+    },
+    "imagegen": {
+      "label": "Image Generation",
+      "vram_gb": 38,
+      "model": "FLUX.2 dev (FP8 ~32 GB + text encoder)"
+    },
+    "embed": {
+      "label": "Embeddings",
+      "vram_gb": 4,
+      "model": "Qwen/bge embedding class"
+    }
+  },
+
+  "perf_tok_s_per_gpu": {
+    "_comment": "Aggregate batched decode tok/s per GPU at interactive SLAs (conservative ends of InferenceMAX / MLPerf / LMSYS / DatabaseMart / CloudRift / dendro-logic published numbers). null = does not fit or not practical.",
+    "gb10":       { "4b": 900,   "20b": 700,   "120b": 750,  "31b": 300,  "35b": 550,  "27b": 350,  "700b": null, "3t": null },
+    "rtx6000pro": { "4b": 12000, "20b": 4400,  "120b": 2000, "31b": 1800, "35b": 6500, "27b": 2000, "700b": 300,  "3t": null },
+    "h200nvl":    { "4b": 15000, "20b": 6000,  "120b": 3200, "31b": 2500, "35b": 8000, "27b": 2800, "700b": 1200, "3t": null },
+    "b200":       { "4b": 25000, "20b": 12000, "120b": 12000, "31b": 8000, "35b": 15000, "27b": 9000, "700b": 4500, "3t": null },
+    "b300":       { "4b": 30000, "20b": 15000, "120b": 15000, "31b": 10000, "35b": 18000, "27b": 11000, "700b": 5500, "3t": 3500 }
+  },
+
+  "storage": {
+    "usd_per_tb": [350, 550],
+    "_storage_note": "2026 NAND crisis pricing: enterprise 15-30TB U.2/E1.S NVMe at ~$370-650/TB street, ~4x year-ago levels",
+    "bytes_per_request": 15000,
+    "base_tb": 2,
+    "chat_requests_per_user_week": 50
+  },
+
+  "network": {
+    "small_switch": [800, 2500],
+    "dac_link": [100, 400],
+    "qsfp_switch": [3000, 8000],
+    "dc_switch": [8000, 25000]
+  },
+
+  "mgmt_node": {
+    "label": "1U MindRouter head node",
+    "price": [2500, 4500],
+    "power_w": 150
+  }
+}

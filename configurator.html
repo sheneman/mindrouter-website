@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Cluster Configurator - MindRouter</title>
+    <meta name="description" content="Interactively size an on-premise LLM inference cluster: set users, throughput, features, and intelligence level, and get hardware specs, price range, and power estimates, from a single DGX Spark to a cluster of HGX B300s.">
+    <meta property="og:title" content="MindRouter Cluster Configurator">
+    <meta property="og:description" content="Size an on-premise LLM inference cluster and get hardware specs, price range, and power estimates.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mindrouter.ai/configurator.html">
+    <script>
+    (function() {
+        var q = new URLSearchParams(location.search).get('theme');
+        var t = (q === 'light' || q === 'dark') ? q :
+                (localStorage.getItem('mr-theme') ||
+                 (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'));
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/configurator.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- ====================================================================== -->
+    <!-- Navbar                                                                  -->
+    <!-- ====================================================================== -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html#telemetry">Telemetry</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="documentation.html">Docs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html#contact">Contact</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content">
+
+    <!-- ====================================================================== -->
+    <!-- Header                                                                  -->
+    <!-- ====================================================================== -->
+    <section class="config-hero">
+        <div class="container">
+            <h1 style="font-size:2.2rem;"><i class="bi bi-sliders cfg-accent-icon"></i> Cluster Configurator</h1>
+            <p class="mt-2 mb-3">
+                Size an on-premise MindRouter inference cluster. Drag the radar handles to describe your workload,
+                including the intelligence level you need relative to today's open-weight frontier, and toggle
+                features to get a hardware build, price range, and power estimate. From a single NVIDIA DGX Spark
+                to a cluster of HGX B300s.
+            </p>
+            <div class="config-disclaimer mb-3">
+                <i class="bi bi-info-circle-fill"></i>
+                <div>
+                    <strong>Planning tool only. We sell nothing and endorse no brand.</strong>
+                    MindRouter is free, open-source software. The vendors, hardware, and models named here
+                    (NVIDIA, Supermicro, and others) are reference examples used to estimate cost and power.
+                    Comparable equipment and models from other vendors and brands will work just as well.
+                </div>
+            </div>
+            <span class="config-data-badge"><i class="bi bi-database-check"></i>
+                Pricing data updated <span id="dataDate">…</span> · USD street prices · estimates, not quotes
+            </span>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Configurator                                                            -->
+    <!-- ====================================================================== -->
+    <section class="config-section py-4">
+        <div class="container-xl" id="configApp">
+            <div class="row g-4">
+
+                <!-- Inputs -->
+                <div class="col-lg-7">
+                    <div class="config-panel">
+                        <div class="config-panel-head">
+                            <span><i class="bi bi-bullseye"></i> Workload Profile — drag the handles</span>
+                            <span class="d-flex gap-1 flex-wrap">
+                                <button type="button" class="preset-btn" data-preset="lab">Starter Lab</button>
+                                <button type="button" class="preset-btn" data-preset="dept">Department</button>
+                                <button type="button" class="preset-btn" data-preset="campus">Campus</button>
+                                <button type="button" class="preset-btn" data-preset="frontier">Frontier</button>
+                            </span>
+                        </div>
+                        <div class="config-panel-body">
+                            <svg id="radarSvg" viewBox="0 0 720 560" role="application"
+                                 aria-label="Radar chart of workload dimensions. Each handle is a slider: use arrow keys to adjust."></svg>
+                            <div class="text-center radar-hint">
+                                Dimensions influence each other — raising demand lifts the budget floor; dragging
+                                budget down trades away intelligence, then throughput and concurrency.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-0">
+                        <div class="col-12">
+                            <div class="config-panel h-100">
+                                <div class="config-panel-head"><span><i class="bi bi-toggles"></i> Simultaneous Features</span></div>
+                                <div class="config-panel-body">
+                                    <div class="d-flex flex-wrap gap-2" id="featureChips"></div>
+
+                                    <div class="mt-3 finetune-grid">
+                                        <a class="text-decoration-none cfg-link" data-bs-toggle="collapse" href="#fineTune">
+                                            <i class="bi bi-input-cursor-text"></i> Fine-tune exact values
+                                        </a>
+                                        <div class="collapse mt-2" id="fineTune">
+                                            <div class="row g-2">
+                                                <div class="col-6"><label for="in-budget">Budget $</label>
+                                                    <input class="form-control form-control-sm" id="in-budget" type="number" min="4000" step="1000"></div>
+                                                <div class="col-6"><label for="in-users">Total users</label>
+                                                    <input class="form-control form-control-sm" id="in-users" type="number" min="5"></div>
+                                                <div class="col-6"><label for="in-chat">Concurrent chat</label>
+                                                    <input class="form-control form-control-sm" id="in-chat" type="number" min="1"></div>
+                                                <div class="col-6"><label for="in-api">API req/week</label>
+                                                    <input class="form-control form-control-sm" id="in-api" type="number" min="0" step="1000"></div>
+                                                <div class="col-6"><label for="in-tokens">Throughput tok/s</label>
+                                                    <input class="form-control form-control-sm" id="in-tokens" type="number" min="50" step="50"></div>
+                                                <div class="col-6"><label for="in-retention">Retention (days)</label>
+                                                    <input class="form-control form-control-sm" id="in-retention" type="number" min="7" max="2555"></div>
+                                                <div class="col-6"><label for="in-model">Model class</label>
+                                                    <select class="form-select form-select-sm" id="in-model"></select></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output -->
+                <div class="col-lg-5">
+                    <div class="config-output">
+                        <div class="config-panel">
+                            <div class="config-panel-head">
+                                <span><i class="bi bi-clipboard-data"></i> Recommended Build</span>
+                                <button type="button" class="copy-spec-btn" id="copySpecBtn"><i class="bi bi-clipboard"></i> Copy spec sheet</button>
+                            </div>
+                            <div class="config-panel-body" id="outputBody">
+                                <div class="text-center mb-2"><span class="tier-badge" id="tierBadge">—</span></div>
+                                <div class="text-center">
+                                    <div class="price-label">Estimated Hardware Cost</div>
+                                    <div class="price-big" id="priceBig" aria-live="polite">—</div>
+                                    <div class="power-line mt-1" id="powerLine" aria-live="polite"></div>
+                                    <div class="power-note" id="powerNote"></div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <svg id="diagramSvg" viewBox="0 0 640 300" role="img"
+                                         aria-label="Diagram of the recommended cluster: MindRouter routing to the recommended servers"></svg>
+                                </div>
+
+                                <div class="spec-list mt-3" id="specList"></div>
+                                <div id="warnList"></div>
+                                <div id="hintBox"></div>
+                                <div class="mt-3" id="altList"></div>
+
+                                <div class="mt-3">
+                                    <a class="text-decoration-none cfg-link-muted" data-bs-toggle="collapse" href="#assumptions">
+                                        <i class="bi bi-info-circle"></i> Sizing assumptions
+                                    </a>
+                                    <div class="collapse" id="assumptions">
+                                        <div class="assumptions-text mt-2">
+                                            <strong>Models</strong> are served quantized (NVFP4 primary; FP8 where VRAM allows) on vLLM-class
+                                            serving stacks. A model must fit within one server's pooled GPU memory (DGX Spark may pair
+                                            two linked units). <strong>Concurrency</strong> assumes ~35% of connected chat users generate
+                                            at once and API traffic peaks at ~6× its weekly average. <strong>Power</strong> assumes each GPU
+                                            averages ~50% of its maximum draw during inference serving (band shown: 40–65%), plus
+                                            platform overhead. <strong>Prices</strong> are USD street-price ranges compiled from vendor and
+                                            reseller listings (see the data date above), plus a 3–10% integration allowance. Supermicro
+                                            is used as the reference server vendor. Estimates only — not a quote.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="index.html#contact" class="btn btn-sm px-4 cfg-contact-btn">
+                                <i class="bi bi-envelope"></i> Want help planning a deployment? Get in touch
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- ====================================================================== -->
+    <!-- Footer                                                                  -->
+    <!-- ====================================================================== -->
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">
+                Open-Source LLM Inference Load Balancer
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp;
+                Apache 2.0 License
+            </p>
+            <div class="d-inline-flex align-items-center gap-2 mt-2">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/NSF_logo.png" alt="NSF" height="20">
+                <small class="text-muted">
+                    This project was developed with support from the National Science Foundation
+                    (<a href="https://www.nsf.gov/awardsearch/show-award?AWD_ID=2427549" class="text-muted">NSF Award #2427549</a>)
+                </small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/configurator.js"></script>
+</body>
+</html>

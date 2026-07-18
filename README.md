@@ -4,6 +4,22 @@ Static promotional website for [MindRouter](https://github.com/ui-insight/MindRo
 
 **Live at:** [mindrouter.ai](https://mindrouter.ai)
 
+## Cluster Configurator
+
+`configurator.html` is an interactive sizing tool: a draggable radar chart of workload
+dimensions (budget, users, concurrency, API volume, intelligence level calibrated
+against the open-weight frontier, throughput, log retention) and feature toggles
+(OCR, TTS/STT, image generation, embeddings). It maps the workload onto real hardware
+tiers — NVIDIA DGX Spark → Supermicro PCIe GPU servers (RTX Pro 6000 Blackwell / H200
+NVL) → HGX B200/B300 nodes — and outputs a price range, power estimate, rack diagram,
+and spec sheet.
+
+All numbers live in **`data/pricing.json`** (USD street-price ranges from vendor/reseller
+listings, model specs, and published inference benchmarks). Refresh it periodically with
+the prompt in **`tools/update-pricing.md`** — designed to run as a scheduled Claude agent
+(monthly cron) that re-researches prices and opens a PR. The page fetches the JSON at
+load, so it needs to be served over HTTP (see below).
+
 ## Local Development
 
 Open `index.html` in a browser, or serve with any static server:

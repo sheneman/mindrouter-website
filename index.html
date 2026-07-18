@@ -43,6 +43,9 @@
                         <a class="nav-link" href="#telemetry">Telemetry</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#docs">Docs</a>
                     </li>
                     <li class="nav-item">
@@ -809,6 +812,48 @@ response = client.chat.completions.create(
 
     </div>
     </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- Configurator Teaser                                                     -->
+    <!-- ====================================================================== -->
+    <section id="configurator" class="py-5" style="background: linear-gradient(180deg, #0a0e1a 0%, #0d1225 100%);">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <span class="badge mb-2 px-3 py-2" style="font-size:0.8rem; background:rgba(100,255,218,0.1); color:#64ffda; border:1px solid rgba(100,255,218,0.3);"><i class="bi bi-sliders"></i> Interactive Tool</span>
+                    <h2 class="fw-bold" style="color:#e9ecef;">Plan Your Inference Cluster</h2>
+                    <p style="color:#8892b0;">
+                        How much hardware does your institution actually need? Drag an interactive radar chart of
+                        users, throughput, features, and budget — with an intelligence axis calibrated against the
+                        open-weight frontier — and get a concrete build: servers, GPUs, price range, and power draw.
+                        From a single NVIDIA DGX Spark to a Supermicro HGX B300 node.
+                    </p>
+                    <a href="configurator.html" class="btn btn-lg px-4" style="background:#64ffda; color:#0a0e1a; font-weight:600;">
+                        <i class="bi bi-sliders"></i> Open the Configurator
+                    </a>
+                </div>
+                <div class="col-lg-5 text-center d-none d-lg-block">
+                    <svg viewBox="0 0 220 200" style="max-width:260px;" role="img" aria-label="Stylized radar chart">
+                        <g stroke="#1a2040" fill="none">
+                            <polygon points="110,20 195,65 195,135 110,180 25,135 25,65"></polygon>
+                            <polygon points="110,52 162,79 162,121 110,148 58,121 58,79"></polygon>
+                            <polygon points="110,84 129,93 129,107 110,116 91,107 91,93"></polygon>
+                            <line x1="110" y1="100" x2="110" y2="20"></line><line x1="110" y1="100" x2="195" y2="65"></line>
+                            <line x1="110" y1="100" x2="195" y2="135"></line><line x1="110" y1="100" x2="110" y2="180"></line>
+                            <line x1="110" y1="100" x2="25" y2="135"></line><line x1="110" y1="100" x2="25" y2="65"></line>
+                        </g>
+                        <polygon points="110,34 178,72 155,118 110,162 45,127 68,81"
+                                 fill="rgba(100,255,218,0.15)" stroke="#64ffda" stroke-width="2"></polygon>
+                        <g fill="#0a0e1a" stroke="#64ffda" stroke-width="2">
+                            <circle cx="110" cy="34" r="5"></circle><circle cx="178" cy="72" r="5"></circle>
+                            <circle cx="155" cy="118" r="5"></circle><circle cx="110" cy="162" r="5"></circle>
+                            <circle cx="45" cy="127" r="5"></circle><circle cx="68" cy="81" r="5"></circle>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- ====================================================================== -->

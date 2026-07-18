@@ -22,8 +22,9 @@
         updateIcon();
     });
 
-    // Smooth scroll for nav links
-    document.querySelectorAll('a[href^="#"]').forEach(function(link) {
+    // Smooth scroll for nav links (skip Bootstrap toggles and the skip link,
+    // which need their default behavior)
+    document.querySelectorAll('a[href^="#"]:not([data-bs-toggle]):not(.skip-link)').forEach(function(link) {
         link.addEventListener('click', function(e) {
             var target = document.querySelector(this.getAttribute('href'));
             if (target) {
