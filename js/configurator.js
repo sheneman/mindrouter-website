@@ -708,38 +708,60 @@
         const shown = Math.min(c.servers, maxShow);
         const isDesk = p.class === 'desktop';
 
-        const boxH = isDesk ? 58 : clamp(24 + p.rack_u * 11, 44, 116);
-        const boxW = isDesk ? 300 : 430;
-        const gap = 12;
-        const switchH = c.network ? 34 : 0;
-        const topY = 96 + switchH;
+        const boxH = isDesk ? 56 : clamp(24 + p.rack_u * 11, 44, 112);
+        const boxW = isDesk ? 300 : 360;
+        const gap = 14;
         const featOn = Object.keys(state.features).filter((k) => state.features[k]);
-        const H = topY + shown * (boxH + gap) + (c.servers > maxShow ? 30 : 0) + (featOn.length ? 40 : 8);
+
+        const stackTop = 18;
+        const stackH = shown * (boxH + gap) - gap;
+        const moreH = c.servers > maxShow ? 24 : 0;
+
+        // MindRouter hub on the left, vertically centered on the node stack;
+        // the network component (if any) hangs directly below it.
+        const hubW = 190, hubH = 64, hubX = 20;
+        const netH = c.network ? 30 : 0;
+        const hubY = Math.max(stackTop, stackTop + stackH / 2 - (hubH + netH) / 2);
+
+        const bottomY = Math.max(stackTop + stackH + moreH, hubY + hubH + netH);
+        const H = bottomY + (featOn.length ? 46 : 16);
 
         svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
         svg.innerHTML = '';
         el('rect', { x: 0.75, y: 0.75, width: W - 1.5, height: H - 1.5, rx: 10, fill: T.bg, stroke: T.bgBorder, 'stroke-width': 1.5 }, svg);
 
-        // Hub
-        const hubW = 220, hubX = (W - hubW) / 2;
-        const hub = el('g', {}, svg);
-        el('rect', { x: hubX, y: 12, width: hubW, height: 52, rx: 8, fill: T.accentBg, stroke: T.accent, 'stroke-width': 1.5 }, hub);
-        text(hub, W / 2, 34, 'MindRouter', { fill: T.accent, 'font-size': 16, 'font-weight': 700, 'text-anchor': 'middle' });
-        text(hub, W / 2, 52, 'route · translate · balance', { fill: T.sub, 'font-size': 9.5, 'text-anchor': 'middle' });
+        const boxX = W - boxW - 28;
 
-        let linkTopY = 64;
+        // Fan of links: one line out of MindRouter to each node (drawn first,
+        // so the boxes sit on top of the line ends).
+        const portX = hubX + hubW, portY = hubY + hubH / 2;
+        for (let i = 0; i < shown; i++) {
+            const sy = stackTop + i * (boxH + gap) + boxH / 2;
+            const sx = isDesk ? boxX : boxX - 8;
+            const midX = (portX + sx) / 2;
+            el('path', {
+                d: 'M ' + portX + ' ' + portY
+                    + ' C ' + midX + ' ' + portY + ' ' + midX + ' ' + sy + ' ' + sx + ' ' + sy,
+                fill: 'none', stroke: T.accent, 'stroke-opacity': 0.45, 'stroke-width': 1.75,
+            }, svg);
+            el('circle', { cx: sx, cy: sy, r: 3, fill: T.accent }, svg);
+        }
+        el('circle', { cx: portX, cy: portY, r: 4.5, fill: T.accent }, svg);
+
+        // Hub
+        const hub = el('g', {}, svg);
+        el('rect', { x: hubX, y: hubY, width: hubW, height: hubH, rx: 8, fill: T.accentBg, stroke: T.accent, 'stroke-width': 1.5 }, hub);
+        text(hub, hubX + hubW / 2, hubY + 27, 'MindRouter', { fill: T.accent, 'font-size': 16, 'font-weight': 700, 'text-anchor': 'middle' });
+        text(hub, hubX + hubW / 2, hubY + 46, 'route · translate · balance', { fill: T.sub, 'font-size': 9.5, 'text-anchor': 'middle' });
         if (c.network) {
-            el('line', { x1: W / 2, y1: 64, x2: W / 2, y2: 78, stroke: T.line, 'stroke-width': 2 }, svg);
-            el('rect', { x: (W - 300) / 2, y: 78, width: 300, height: 22, rx: 4, fill: T.box, stroke: T.line }, svg);
-            text(svg, W / 2, 93, NET_LABELS[c.network] || c.network,
+            el('rect', { x: hubX, y: hubY + hubH + 8, width: hubW, height: 22, rx: 4, fill: T.box, stroke: T.line }, svg);
+            text(svg, hubX + hubW / 2, hubY + hubH + 23, NET_LABELS[c.network] || c.network,
                 { fill: T.sub, 'font-size': 10, 'text-anchor': 'middle' });
-            linkTopY = 100;
         }
 
-        const boxX = (W - boxW) / 2;
+        // Server nodes on the right
         for (let i = 0; i < shown; i++) {
-            const y = topY + i * (boxH + gap);
-            el('line', { x1: W / 2, y1: linkTopY, x2: W / 2, y2: y, stroke: T.line, 'stroke-width': 1.5 }, svg);
+            const y = stackTop + i * (boxH + gap);
             const g = el('g', {}, svg);
             el('rect', { x: boxX, y, width: boxW, height: boxH, rx: 6, fill: T.box, stroke: T.boxBorder, 'stroke-width': 1.5 }, g);
             if (!isDesk) {
@@ -756,19 +778,19 @@
             const nLed = isDesk ? 1 : gpusHere;
             for (let j = 0; j < nLed; j++) {
                 el('rect', {
-                    x: boxX + boxW - 18 - j * 16, y: y + boxH - 20, width: 11, height: 11, rx: 2,
+                    x: boxX + boxW - 18 - j * 16, y: y + boxH - 18, width: 11, height: 11, rx: 2,
                     fill: T.led, stroke: T.accent, 'stroke-width': 1,
                 }, g);
             }
         }
         if (c.servers > maxShow) {
-            text(svg, W / 2, topY + shown * (boxH + gap) + 12,
+            text(svg, boxX + boxW / 2, stackTop + stackH + 16,
                 '+ ' + (c.servers - maxShow) + ' more identical server' + (c.servers - maxShow > 1 ? 's' : ''),
                 { fill: T.sub, 'font-size': 11, 'text-anchor': 'middle' });
         }
         if (featOn.length) {
-            const yF = H - 28;
-            let xF = boxX;
+            const yF = H - 30;
+            let xF = 20;
             for (const k of featOn) {
                 const label = D.features[k].label;
                 const w = label.length * 6.2 + 22;
