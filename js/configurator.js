@@ -34,16 +34,16 @@
     // Radar axes. min/max are clamped ends; "log" axes interpolate in log
     // space so the interesting low end gets most of the travel.
     const AXES = [
-        { id: 'budget',    label: 'Budget',            min: 4000, max: 1600000, scale: 'log',  fmt: fmtMoney },
-        { id: 'users',     label: 'Total Users',       min: 5,    max: 50000,   scale: 'log',  fmt: fmtCount },
-        { id: 'chat',      label: 'Concurrent Chat',   min: 1,    max: 2500,    scale: 'log',  fmt: fmtCount },
-        { id: 'api',       label: 'API Req / wk',      min: 0,    max: 10000000, scale: 'log0', logMin: 1000, fmt: fmtCount },
+        { id: 'budget',    label: 'Budget',            min: 4000, max: 1600000, scale: 'log',  fmt: fmtMoney,  help: 'ax-budget' },
+        { id: 'users',     label: 'Total Users',       min: 5,    max: 50000,   scale: 'log',  fmt: fmtCount,  help: 'ax-users' },
+        { id: 'chat',      label: 'Concurrent Chat',   min: 1,    max: 2500,    scale: 'log',  fmt: fmtCount,  help: 'ax-chat' },
+        { id: 'api',       label: 'API Req / wk',      min: 0,    max: 10000000, scale: 'log0', logMin: 1000, fmt: fmtCount, help: 'ax-api' },
         // Value is the index into D.models (snaps to class detents); max is set
         // from the data at boot. Shown as % of the open-weight frontier.
-        { id: 'modelIdx',  label: 'Intelligence',      min: 0,    max: 7,       scale: 'lin',
+        { id: 'modelIdx',  label: 'Intelligence',      min: 0,    max: 7,       scale: 'lin',  help: 'ax-intel',
           fmt: (v) => D ? D.models[clamp(Math.round(v), 0, D.models.length - 1)].intelligence + '%' : String(v) },
-        { id: 'tokens',    label: 'Throughput tok/s',  min: 50,   max: 120000,  scale: 'log',  fmt: fmtCount },
-        { id: 'retention', label: 'Log Retention',     min: 7,    max: 2555,    scale: 'log',  fmt: fmtDays },
+        { id: 'tokens',    label: 'Throughput tok/s',  min: 50,   max: 120000,  scale: 'log',  fmt: fmtCount,  help: 'ax-tokens' },
+        { id: 'retention', label: 'Log Retention',     min: 7,    max: 2555,    scale: 'log',  fmt: fmtDays,   help: 'ax-retention' },
     ];
 
     const PRESETS = {
@@ -382,8 +382,28 @@
             h.addEventListener('pointerdown', (ev) => startDrag(ev, i, h));
             h.addEventListener('keydown', (ev) => radarKey(ev, i));
             handles.push(h);
+
+            // In-context help popovers: labels open on hover/click, handles on
+            // a longer hover (so casual drags don't trigger them).
+            wireAxisHelp(lbl, ax, 180, true);
+            wireAxisHelp(val, ax, 180, true);
+            wireAxisHelp(h, ax, 450, false);
         });
         radarEls = { svg, poly, handles, labels, values };
+    }
+
+    let axisHelpTimer = null;
+    function wireAxisHelp(elm, ax, delay, clickable) {
+        if (!window.MRGlossary || !ax.help) return;
+        elm.addEventListener('mouseenter', () => {
+            clearTimeout(axisHelpTimer);
+            axisHelpTimer = setTimeout(() => window.MRGlossary.openAt(ax.help, elm), delay);
+        });
+        elm.addEventListener('mouseleave', () => clearTimeout(axisHelpTimer));
+        if (clickable) {
+            elm.style.cursor = 'help';
+            elm.addEventListener('click', () => window.MRGlossary.openAt(ax.help, elm));
+        }
     }
 
     function renderRadar() {
@@ -412,6 +432,8 @@
         handle.setPointerCapture(ev.pointerId);
         handle.focus();
         handle.classList.add('dragging');
+        clearTimeout(axisHelpTimer);
+        if (window.MRGlossary) window.MRGlossary.hide();
         const ax = AXES[i], a = axisAngle(i);
         const move = (e) => {
             const p = svgPoint(radarEls.svg, e);
@@ -839,6 +861,12 @@
         if (hash && PRESETS[hash[1]]) {
             const btn = document.querySelector('.preset-btn[data-preset="' + hash[1] + '"]');
             if (btn) btn.click();
+        }
+        // Deep link: #define=ax-tokens opens a radar-axis help popover.
+        const dm = location.hash.match(/define=(ax-[\w-]+)/);
+        if (dm && window.MRGlossary) {
+            const idx = AXES.findIndex((a) => a.help === dm[1]);
+            if (idx >= 0) window.MRGlossary.openAt(dm[1], radarEls.labels[idx]);
         }
     }
 

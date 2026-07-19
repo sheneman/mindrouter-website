@@ -35,6 +35,35 @@
         power: '<path d="M34 4 L20 26 h9 L27 40 L44 18 h-9 Z" class="g-a"/>',
         chip: '<rect x="20" y="10" width="24" height="24" rx="3" class="g-df"/><rect x="27" y="17" width="10" height="10" class="g-afd"/><line x1="26" y1="4" x2="26" y2="10" class="g-d"/><line x1="38" y1="4" x2="38" y2="10" class="g-d"/><line x1="26" y1="34" x2="26" y2="40" class="g-d"/><line x1="38" y1="34" x2="38" y2="40" class="g-d"/><line x1="14" y1="16" x2="20" y2="16" class="g-d"/><line x1="14" y1="28" x2="20" y2="28" class="g-d"/><line x1="44" y1="16" x2="50" y2="16" class="g-d"/><line x1="44" y1="28" x2="50" y2="28" class="g-d"/>',
         model: '<circle cx="12" cy="12" r="3.5" class="g-af"/><circle cx="12" cy="32" r="3.5" class="g-af"/><circle cx="32" cy="8" r="3.5" class="g-df"/><circle cx="32" cy="22" r="3.5" class="g-df"/><circle cx="32" cy="36" r="3.5" class="g-df"/><circle cx="52" cy="22" r="3.5" class="g-af"/><line x1="15" y1="13" x2="29" y2="9" class="g-d"/><line x1="15" y1="14" x2="29" y2="21" class="g-d"/><line x1="15" y1="31" x2="29" y2="23" class="g-d"/><line x1="15" y1="33" x2="29" y2="35" class="g-d"/><line x1="35" y1="9" x2="49" y2="21" class="g-d"/><line x1="35" y1="22" x2="48" y2="22" class="g-d"/><line x1="35" y1="35" x2="49" y2="23" class="g-d"/>',
+        money: '<rect x="6" y="14" width="30" height="18" rx="2" class="g-df"/><circle cx="21" cy="23" r="5" class="g-afd"/><circle cx="45" cy="22" r="11" class="g-a"/><path d="M45 15.5 v13 M41.5 18.5 h5 a2 2 0 0 1 0 4 h-3 a2 2 0 0 0 0 4 h5" class="g-a"/>',
+        users: '<circle cx="24" cy="14" r="6" class="g-a"/><path d="M12 37 a12 10 0 0 1 24 0" class="g-a"/><circle cx="43" cy="16" r="5" class="g-d"/><path d="M34 37 a10 8 0 0 1 18 0" class="g-d"/>',
+        chat: '<rect x="7" y="7" width="29" height="16" rx="4" class="g-a"/><path d="M14 23 v7 l8 -7" class="g-a"/><rect x="30" y="21" width="27" height="14" rx="4" class="g-df"/><path d="M50 35 v5 l-6 -5" class="g-d"/>',
+    };
+
+    // In-context help for the radar axes (opened via MRGlossary.openAt from
+    // configurator.js; not part of text decoration).
+    const AXIS_ENTRIES = {
+        'ax-budget': { img: 'money', title: 'Budget axis',
+            what: 'The capital you plan to spend on hardware, in US dollars. Street-price ranges, not vendor quotes.',
+            role: 'Both input and output: raising any demand axis lifts the budget floor automatically, and dragging budget down makes the tool trade away intelligence first, then throughput and concurrency, until the build fits.' },
+        'ax-users': { img: 'users', title: 'Total Users axis',
+            what: 'Everyone with an account — students, faculty, staff, API key holders. Most are not active at any given moment.',
+            role: 'Drives log-storage sizing (each user generates chat history) and bounds concurrency: concurrent chat can never exceed total users.' },
+        'ax-chat': { img: 'chat', title: 'Concurrent Chat axis',
+            what: 'How many people are actively mid-conversation at the same moment — typing or watching a reply stream in.',
+            role: 'About 35% of them are assumed to be generating at any instant; each becomes a stream that needs KV-cache memory and a slice of throughput.' },
+        'ax-api': { img: 'net', title: 'API Requests axis',
+            what: 'Programmatic requests per week from scripts, applications, and integrations — machine traffic, as opposed to interactive chat.',
+            role: 'Converted into peak concurrent streams assuming traffic peaks at ~4× its weekly average and requests generate for ~6 seconds each.' },
+        'ax-intel': { img: 'model', title: 'Intelligence axis',
+            what: 'How capable a model you want, as a percentage of the current open-weight frontier (Kimi K3 = 100%). The handle snaps to real model classes, from ~4B small models up to the frontier.',
+            role: 'The biggest cost lever by far: up to ~65% is single-GPU territory; ~89% (GLM-5.2) needs an 8-GPU node; 100% requires an HGX B300-class machine.' },
+        'ax-tokens': { img: 'speed', title: 'Throughput axis',
+            what: 'The aggregate generation speed target for the whole cluster, in tokens per second across all simultaneous streams.',
+            role: 'A floor, not a cap: if your concurrency demands more than you set (each stream is budgeted ~20 tok/s), the axis raises itself automatically.' },
+        'ax-retention': { img: 'stor', title: 'Log Retention axis',
+            what: 'How long request/response logs and audit records are kept before deletion. Compliance policies often dictate months to years.',
+            role: 'Sizes the NVMe storage line: total weekly requests × ~15 KB per logged request × the retention window.' },
     };
 
     // ---------------------------------------------------------------- //
@@ -221,7 +250,7 @@
     // Popover                                                          //
     // ---------------------------------------------------------------- //
 
-    let pop = null, currentTerm = null, hoverTimer = null, hashOpened = false;
+    let pop = null, currentTerm = null, currentKey = null, hoverTimer = null, hashOpened = false;
 
     function ensurePop() {
         if (pop) return pop;
@@ -233,13 +262,17 @@
         return pop;
     }
 
-    function entryFor(key) { return ENTRIES.find((e) => e.key === key); }
+    function entryFor(key) {
+        return ENTRIES.find((e) => e.key === key) || AXIS_ENTRIES[key];
+    }
 
-    function open(termEl) {
-        const e = entryFor(termEl.dataset.term);
+    function open(termEl, keyOverride) {
+        const key = keyOverride || termEl.dataset.term;
+        const e = entryFor(key);
         if (!e) return;
         ensurePop();
         currentTerm = termEl;
+        currentKey = key;
         pop.innerHTML =
             '<button type="button" class="term-pop-close" aria-label="Dismiss definition">×</button>'
             + '<div class="term-pop-head">'
@@ -268,6 +301,7 @@
     function hide() {
         if (pop) pop.style.display = 'none';
         currentTerm = null;
+        currentKey = null;
     }
 
     function maybeOpenFromHash(root) {
@@ -310,7 +344,7 @@
     window.addEventListener('resize', () => {
         // Re-anchor to the term on resize (or dismiss if it's gone).
         if (!pop || pop.style.display === 'none') return;
-        if (currentTerm && document.contains(currentTerm)) open(currentTerm);
+        if (currentTerm && document.contains(currentTerm)) open(currentTerm, currentKey);
         else hide();
     });
 
@@ -321,8 +355,13 @@
         document.querySelectorAll(sel).forEach(decorate);
     });
 
-    window.MRGlossary = { decorate, open: (key) => {
-        const t = document.querySelector('.term[data-term="' + key + '"]');
-        if (t) open(t);
-    } };
+    window.MRGlossary = {
+        decorate,
+        hide,
+        openAt: (key, anchorEl) => open(anchorEl, key),
+        open: (key) => {
+            const t = document.querySelector('.term[data-term="' + key + '"]');
+            if (t) open(t);
+        },
+    };
 })();
