@@ -29,7 +29,6 @@
         tokens: 1000,
         retention: 365,
         modelIdx: 2,          // index into D.models
-        features: { ocr: false, voice: true, imagegen: false, embed: false },
     };
 
     // Radar axes. min/max are clamped ends; "log" axes interpolate in log
@@ -48,14 +47,10 @@
     ];
 
     const PRESETS = {
-        lab:      { budget: 9000,   users: 25,   chat: 5,   api: 5000,    tokens: 300,   retention: 90,
-                    modelIntel: 51, features: { ocr: false, voice: false, imagegen: false, embed: false } },
-        dept:     { budget: 90000,  users: 500,  chat: 60,  api: 250000,  tokens: 3000,  retention: 365,
-                    modelIntel: 65, features: { ocr: true, voice: true, imagegen: false, embed: true } },
-        campus:   { budget: 700000, users: 5000, chat: 400, api: 2000000, tokens: 15000, retention: 1095,
-                    modelIntel: 89, features: { ocr: true, voice: true, imagegen: true, embed: true } },
-        frontier: { budget: 1500000, users: 2000, chat: 150, api: 1000000, tokens: 10000, retention: 2555,
-                    modelIntel: 100, features: { ocr: true, voice: true, imagegen: true, embed: true } },
+        lab:      { budget: 9000,   users: 25,   chat: 5,   api: 5000,    tokens: 300,   retention: 90,  modelIntel: 51 },
+        dept:     { budget: 90000,  users: 500,  chat: 60,  api: 250000,  tokens: 3000,  retention: 365, modelIntel: 65 },
+        campus:   { budget: 700000, users: 5000, chat: 400, api: 2000000, tokens: 15000, retention: 1095, modelIntel: 89 },
+        frontier: { budget: 1500000, users: 2000, chat: 150, api: 1000000, tokens: 10000, retention: 2555, modelIntel: 100 },
     };
 
     // ------------------------------------------------------------------ //
@@ -133,12 +128,6 @@
     }
     function demandTokens(s) { return demandStreams(s) * A.per_stream_tok_s; }
 
-    function featVram(s) {
-        let gb = 0;
-        for (const k in s.features) if (s.features[k] && D.features[k]) gb += D.features[k].vram_gb;
-        return gb;
-    }
-
     function storageNeeds(s) {
         const reqWk = s.api + s.users * D.storage.chat_requests_per_user_week;
         const rawTb = reqWk * (s.retention / 7) * D.storage.bytes_per_request / 1e12;
@@ -150,9 +139,9 @@
     //
     // The primary model runs as g replica groups of k GPUs each (tensor
     // parallel within a group). Every group holds its own full copy of the
-    // weights (W); KV cache, auxiliary models, and feature models (restGb)
-    // are counted once across the cluster and live in the groups' leftover
-    // space: feasibility requires g*k*usable >= g*W + restGb.
+    // weights (W); the KV cache (restGb) is counted once across the cluster
+    // and lives in the groups' leftover space: feasibility requires
+    // g*k*usable >= g*W + restGb.
     function sizeOn(p, s, model, restGb, targetTok, streams) {
         const gpu = D.gpus[p.gpu];
         const usable = gpu.vram_gb * A.vram_usable_fraction;
@@ -260,7 +249,7 @@
         const model = D.models[s.modelIdx];
         const streams = demandStreams(s);
         const targetTok = Math.max(s.tokens, demandTokens(s));
-        const restGb = streams * model.kv_gb_per_stream + featVram(s);
+        const restGb = streams * model.kv_gb_per_stream;
 
         const candidates = [];
         for (const p of D.platforms) {
@@ -477,28 +466,8 @@
     }
 
     // ------------------------------------------------------------------ //
-    // Aux inputs: features, fine-tune, presets                           //
+    // Aux inputs: fine-tune fields, presets                              //
     // ------------------------------------------------------------------ //
-
-    function buildFeatures() {
-        const wrap = document.getElementById('featureChips');
-        wrap.innerHTML = '';
-        const icons = { ocr: 'bi-eye', voice: 'bi-mic', imagegen: 'bi-image', embed: 'bi-diagram-2' };
-        for (const key in D.features) {
-            const f = D.features[key];
-            const lab = document.createElement('label');
-            lab.className = 'feature-chip' + (state.features[key] ? ' on' : '');
-            lab.innerHTML = '<input type="checkbox"' + (state.features[key] ? ' checked' : '') + '>'
-                + '<i class="bi ' + (icons[key] || 'bi-plug') + '"></i> ' + f.label;
-            lab.title = f.model + ' (+' + f.vram_gb + ' GB VRAM)';
-            lab.querySelector('input').addEventListener('change', (ev) => {
-                state.features[key] = ev.target.checked;
-                lab.classList.toggle('on', ev.target.checked);
-                update('features');
-            });
-            wrap.appendChild(lab);
-        }
-    }
 
     function buildInputs() {
         AXES.forEach((ax) => {
@@ -539,8 +508,6 @@
                 for (const k of ['budget', 'users', 'chat', 'api', 'tokens', 'retention']) state[k] = p[k];
                 state.modelIdx = D.models.findIndex((m) => m.intelligence === p.modelIntel);
                 if (state.modelIdx < 0) state.modelIdx = 2;
-                state.features = Object.assign({}, p.features);
-                buildFeatures();
                 update('preset');
             });
         });
@@ -589,6 +556,7 @@
         renderSpecs(c, m);
         renderWarnings(buildWarnings(c, m));
         renderAlternates();
+        if (window.MRGlossary) window.MRGlossary.decorate(document.getElementById('outputBody'));
     }
 
     function gpuShort(label) {
@@ -617,9 +585,6 @@
         }
         row('Total GPU memory', c.totalVram.toLocaleString('en-US') + ' GB');
         row('Primary model', m.example, m.nvfp4_gb + ' GB @ NVFP4');
-        const extras = [];
-        for (const k in state.features) if (state.features[k]) extras.push(D.features[k].label);
-        if (extras.length) row('Also serving', extras.join(' · '));
         row('Est. throughput', '~' + fmtCount(c.aggTok) + ' tok/s aggregate',
             '~' + c.perStreamTok + ' tok/s per stream @ ' + result.streams + ' streams');
         row('Storage (logs)', c.storage.tb + ' TB NVMe', fmtDays(state.retention) + ' retention');
@@ -690,12 +655,10 @@
             bg: '#f8fafc', bgBorder: '#e2e8f0', box: '#ffffff', boxBorder: '#b6c2d4',
             ear: '#d5dde8', line: '#b6c2d4', accent: '#0d9488', accentBg: 'rgba(13,148,136,0.08)',
             text: '#1e293b', sub: '#64748b', led: 'rgba(13,148,136,0.15)',
-            featBg: 'rgba(111,66,193,0.08)', featBorder: '#6f42c1', featText: '#5b21b6',
         } : {
             bg: '#0d1225', bgBorder: '#1a2040', box: '#101830', boxBorder: '#2a3a6a',
             ear: '#1a2447', line: '#22305a', accent: '#64ffda', accentBg: 'rgba(100,255,218,0.1)',
             text: '#e9ecef', sub: '#5a6380', led: 'rgba(100,255,218,0.25)',
-            featBg: 'rgba(111,66,193,0.15)', featBorder: '#6f42c1', featText: '#b794f6',
         };
     }
 
@@ -711,7 +674,6 @@
         const boxH = isDesk ? 56 : clamp(24 + p.rack_u * 11, 44, 112);
         const boxW = isDesk ? 300 : 360;
         const gap = 14;
-        const featOn = Object.keys(state.features).filter((k) => state.features[k]);
 
         const stackTop = 18;
         const stackH = shown * (boxH + gap) - gap;
@@ -724,7 +686,7 @@
         const hubY = Math.max(stackTop, stackTop + stackH / 2 - (hubH + netH) / 2);
 
         const bottomY = Math.max(stackTop + stackH + moreH, hubY + hubH + netH);
-        const H = bottomY + (featOn.length ? 46 : 16);
+        const H = bottomY + 16;
 
         svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
         svg.innerHTML = '';
@@ -788,17 +750,6 @@
                 '+ ' + (c.servers - maxShow) + ' more identical server' + (c.servers - maxShow > 1 ? 's' : ''),
                 { fill: T.sub, 'font-size': 11, 'text-anchor': 'middle' });
         }
-        if (featOn.length) {
-            const yF = H - 30;
-            let xF = 20;
-            for (const k of featOn) {
-                const label = D.features[k].label;
-                const w = label.length * 6.2 + 22;
-                el('rect', { x: xF, y: yF, width: w, height: 20, rx: 10, fill: T.featBg, stroke: T.featBorder }, svg);
-                text(svg, xF + w / 2, yF + 13.5, label, { fill: T.featText, 'font-size': 9.5, 'text-anchor': 'middle' });
-                xF += w + 8;
-            }
-        }
     }
 
     function text(parent, x, y, str, attrs) {
@@ -814,7 +765,6 @@
     function specText() {
         if (!result) return 'No feasible configuration.';
         const c = result.chosen, p = c.platform, m = result.model;
-        const feats = Object.keys(state.features).filter((k) => state.features[k]).map((k) => D.features[k].label);
         return [
             'MindRouter Cluster Configurator — estimate (' + D.generated + ' pricing data)',
             '',
@@ -822,7 +772,6 @@
                 + fmtCount(state.api) + ' API req/wk · '
                 + fmtCount(result.targetTok) + ' tok/s target · ' + fmtDays(state.retention) + ' log retention',
             'Primary model: ' + m.example + ' (' + m.label + ', NVFP4, ' + m.nvfp4_gb + ' GB)',
-            feats.length ? 'Features: ' + feats.join(', ') : null,
             '',
             'Hardware: ' + c.servers + '× ' + p.label + (p.class !== 'desktop' ? ' with ' + c.gpuCount + '× ' + gpuShort(c.gpu.label) : ''),
             'Total GPU memory: ' + c.totalVram + ' GB · Storage: ' + c.storage.tb + ' TB NVMe',
@@ -849,7 +798,6 @@
 
         document.getElementById('dataDate').textContent = D.generated;
         buildRadar();
-        buildFeatures();
         buildInputs();
         buildPresets();
 

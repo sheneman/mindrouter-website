@@ -180,29 +180,71 @@
 .radar-axis-label.flash, .radar-axis-value.flash { fill: var(--cfg-flash); }
 .radar-hint { color: var(--cfg-faint); font-size: 0.72rem; }
 
-/* Feature toggle chips */
-.feature-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    background: var(--cfg-surface);
-    border: 1px solid var(--cfg-border-2);
-    color: var(--cfg-text-2);
-    border-radius: 0.5rem;
-    padding: 0.45rem 0.8rem;
-    font-size: 0.82rem;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.15s;
+/* Glossary terms + popover */
+.term {
+    border-bottom: 1px dotted var(--cfg-accent);
+    cursor: help;
+    text-decoration: none;
+    color: inherit;
 }
-.feature-chip:hover { border-color: var(--cfg-accent); }
-.feature-chip input { accent-color: var(--cfg-accent); cursor: pointer; }
-.feature-chip.on {
+.term:hover, .term:focus-visible {
     background: var(--cfg-accent-bg);
-    border-color: var(--cfg-accent);
-    color: var(--cfg-text);
+    outline: none;
+    border-bottom-style: solid;
 }
-.feature-chip .bi { color: var(--cfg-accent); }
+.term-pop {
+    position: absolute;
+    z-index: 3000;
+    width: min(330px, calc(100vw - 24px));
+    background: var(--cfg-panel-bg);
+    border: 1px solid var(--cfg-accent-border);
+    border-radius: 0.6rem;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+    padding: 0.8rem 0.9rem;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--cfg-text-2);
+}
+[data-bs-theme="light"] .term-pop { box-shadow: 0 10px 32px rgba(30, 41, 59, 0.18); }
+.term-pop-close {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.45rem;
+    background: none;
+    border: none;
+    color: var(--cfg-muted);
+    font-size: 1.05rem;
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    cursor: pointer;
+    border-radius: 0.3rem;
+}
+.term-pop-close:hover { color: var(--cfg-text); background: var(--cfg-accent-bg); }
+.term-pop-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.45rem;
+    padding-right: 1.2rem;
+}
+.term-pop-head svg { flex: 0 0 auto; display: block; }
+.term-pop-title { color: var(--cfg-text); font-weight: 700; font-size: 0.92rem; }
+.term-pop-what { margin-bottom: 0.4rem; }
+.term-pop-role {
+    border-left: 3px solid var(--cfg-accent);
+    background: var(--cfg-accent-bg);
+    padding: 0.35rem 0.6rem;
+    border-radius: 0 0.3rem 0.3rem 0;
+    font-size: 0.76rem;
+    color: var(--cfg-hint-text);
+}
+.term-pop-role strong { color: var(--cfg-text); }
+/* Glyph strokes/fills inside popover illustrations */
+.term-pop .g-a { stroke: var(--cfg-accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.term-pop .g-af { fill: var(--cfg-accent); stroke: none; }
+.term-pop .g-afd { fill: var(--cfg-accent); opacity: 0.25; stroke: none; }
+.term-pop .g-d { stroke: var(--cfg-border-2); fill: none; stroke-width: 2; stroke-linecap: round; }
+.term-pop .g-df { fill: var(--cfg-surface); stroke: var(--cfg-border-2); stroke-width: 1.5; }
 
 /* Fine-tune inputs */
 .cfg-link { color: var(--cfg-accent); font-size: 0.78rem; }

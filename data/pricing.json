@@ -264,29 +264,6 @@
     }
   ],
 
-  "features": {
-    "ocr": {
-      "label": "OCR / Vision",
-      "vram_gb": 8,
-      "model": "PaddleOCR-VL-1.5 (doc parsing) + VLM headroom"
-    },
-    "voice": {
-      "label": "TTS + STT",
-      "vram_gb": 8,
-      "model": "Kokoro-82M TTS + Whisper large-v3-turbo"
-    },
-    "imagegen": {
-      "label": "Image Generation",
-      "vram_gb": 38,
-      "model": "FLUX.2 dev (FP8 ~32 GB + text encoder)"
-    },
-    "embed": {
-      "label": "Embeddings",
-      "vram_gb": 4,
-      "model": "Qwen/bge embedding class"
-    }
-  },
-
   "perf_tok_s_per_gpu": {
     "_comment": "Aggregate batched decode tok/s per GPU at interactive SLAs (conservative ends of InferenceMAX / MLPerf / LMSYS / DatabaseMart / CloudRift / dendro-logic published numbers). null = does not fit or not practical.",
     "gb10":       { "4b": 900,   "20b": 700,   "120b": 750,  "31b": 300,  "35b": 550,  "27b": 350,  "700b": null, "3t": null },

@@ -8,8 +8,8 @@ Static promotional website for [MindRouter](https://github.com/ui-insight/MindRo
 
 `configurator.html` is an interactive sizing tool: a draggable radar chart of workload
 dimensions (budget, users, concurrency, API volume, intelligence level calibrated
-against the open-weight frontier, throughput, log retention) and feature toggles
-(OCR, TTS/STT, image generation, embeddings). It maps the workload onto real hardware
+against the open-weight frontier, throughput, log retention), with a hover glossary
+explaining the technical terms. It maps the workload onto real hardware
 tiers — NVIDIA DGX Spark → Supermicro PCIe GPU servers (RTX Pro 6000 Blackwell / H200
 NVL) → HGX B200/B300 nodes — and outputs a price range, power estimate, rack diagram,
 and spec sheet.

@@ -24,7 +24,7 @@ database behind the public Cluster Configurator at https://mindrouter.ai/configu
 **Do not change the JSON schema.** Only update values (prices, TDPs, VRAM, perf
 numbers, model entries) and the `generated` / `generated_by` fields. The
 configurator JavaScript depends on the existing keys:
-`assumptions`, `gpus`, `platforms`, `models`, `features`, `perf_tok_s_per_gpu`,
+`assumptions`, `gpus`, `platforms`, `models`, `perf_tok_s_per_gpu`,
 `storage`, `network`, `mgmt_node`. Every model id used in `models[]` must have a
 column in every row of `perf_tok_s_per_gpu` (value or null).
 
