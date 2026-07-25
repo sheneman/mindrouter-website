@@ -326,7 +326,8 @@
     requestAnimationFrame(animate);
 
     // --- Simulated total tokens counter ---
-    let totalTokens = 512847293;
+    // Seeded from the live UI cluster total; ticks upward with simulated traffic.
+    let totalTokens = 48628613612;
     const counterEl = document.getElementById('total-tokens-counter');
 
     function incrementTokens() {

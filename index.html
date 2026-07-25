@@ -9,6 +9,13 @@
     <meta property="og:description" content="Route LLM inference across GPU backends with protocol translation, fair-share scheduling, and full observability.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mindrouter.ai">
+    <!-- Google Scholar / Zotero citation metadata (PEARC '26 paper) -->
+    <meta name="citation_title" content="MindRouter: Open-source LLM inference gateway for institutional AI sovereignty">
+    <meta name="citation_author" content="Sheneman, L.">
+    <meta name="citation_publication_date" content="2026">
+    <meta name="citation_conference_title" content="Proceedings of the Practice and Experience in Advanced Research Computing Conference 2026 (PEARC '26)">
+    <meta name="citation_publisher" content="Association for Computing Machinery">
+    <meta name="citation_doi" content="10.1145/3785462.3815861">
     <script>
     (function() {
         var t = localStorage.getItem('mr-theme') ||
@@ -50,6 +57,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#cite">Cite</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a>
@@ -103,7 +113,7 @@
             <div class="text-center" style="background:#0a0e1a; padding:10px 0 14px;">
                 <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2.5px; color: #8892b0;">Total Tokens Served</div>
                 <div id="total-tokens-counter" style="font-size: 2.2rem; font-weight: 600; color: rgba(100,255,218,0.55); font-family: 'JetBrains Mono', monospace; line-height: 1.1;">
-                    512,847,293
+                    48,628,613,612
                 </div>
             </div>
         </div>
@@ -906,6 +916,81 @@ response = client.chat.completions.create(
     </section>
 
     <!-- ====================================================================== -->
+    <!-- Citation                                                                -->
+    <!-- ====================================================================== -->
+    <section id="cite" class="py-5" style="background: var(--mr-sidebar-bg);">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="text-center mb-4">
+                        <span class="badge mb-2 px-3 py-2" style="font-size:0.8rem; background:rgba(100,255,218,0.12); color:#0f9b8e; border:1px solid rgba(100,255,218,0.4);">
+                            <i class="bi bi-journal-text"></i> Peer-Reviewed Publication
+                        </span>
+                        <h2 class="fw-bold mb-2">Cite MindRouter</h2>
+                        <p class="text-muted mx-auto mb-0" style="max-width:640px;">
+                            MindRouter is described in a paper presented at PEARC&nbsp;&rsquo;26. If MindRouter supports your research, teaching, or infrastructure work, please cite it.
+                        </p>
+                    </div>
+
+                    <div class="rounded-4 shadow-lg overflow-hidden"
+                         style="background: linear-gradient(135deg, #0f2027 0%, #203a43 55%, #2c5364 100%); border:1px solid rgba(100,255,218,0.22);">
+                        <div class="p-4 p-md-5">
+                            <div class="d-flex align-items-start gap-3">
+                                <i class="bi bi-quote d-none d-md-block" style="font-size:2.6rem; color:rgba(100,255,218,0.35); line-height:1;"></i>
+                                <div class="flex-grow-1">
+                                    <p id="citationText" class="mb-0" style="color:rgba(255,255,255,0.92); font-size:1.05rem; line-height:1.9;">
+                                        Sheneman, L. (2026). <em style="color:#fff;">MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                                        In <span style="color:rgba(255,255,255,0.85);">Proceedings of the Practice and Experience in Advanced Research Computing Conference 2026 (PEARC&nbsp;&rsquo;26)</span>.
+                                        Association for Computing Machinery.
+                                        <a href="https://doi.org/10.1145/3785462.3815861" target="_blank" rel="noopener"
+                                           style="color:#64ffda; text-decoration:none; border-bottom:1px solid rgba(100,255,218,0.4); white-space:nowrap;">https://doi.org/10.1145/3785462.3815861</a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-4">
+                                <button type="button" class="btn px-3" id="copyCitationBtn"
+                                        data-copy-target="citation-plain"
+                                        style="background:#64ffda; color:#0a0e1a; font-weight:600;">
+                                    <i class="bi bi-clipboard"></i> Copy citation
+                                </button>
+                                <button type="button" class="btn btn-outline-light px-3" id="copyBibtexBtn"
+                                        data-copy-target="citation-bibtex">
+                                    <i class="bi bi-code-square"></i> Copy BibTeX
+                                </button>
+                                <a class="btn btn-outline-light px-3" href="https://doi.org/10.1145/3785462.3815861" target="_blank" rel="noopener">
+                                    <i class="bi bi-box-arrow-up-right"></i> View in the ACM Digital Library
+                                </a>
+                                <button class="btn btn-link px-3 ms-auto text-decoration-none" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#bibtexBlock"
+                                        aria-expanded="false" aria-controls="bibtexBlock"
+                                        style="color:rgba(255,255,255,0.6);">
+                                    Show BibTeX <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+
+                            <div class="collapse mt-3" id="bibtexBlock">
+                                <pre class="mb-0 p-3 rounded-3" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); color:#cdd6f4; font-size:0.82rem; line-height:1.7; overflow-x:auto;"><code id="citation-bibtex">@inproceedings{sheneman2026mindrouter,
+  author    = {Sheneman, L.},
+  title     = {MindRouter: Open-source LLM inference gateway for institutional AI sovereignty},
+  booktitle = {Proceedings of the Practice and Experience in Advanced Research Computing Conference 2026 (PEARC '26)},
+  year      = {2026},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/3785462.3815861},
+  url       = {https://doi.org/10.1145/3785462.3815861}
+}</code></pre>
+                            </div>
+
+                            <!-- Plain-text source for the clipboard, kept out of the visual flow -->
+                            <span id="citation-plain" hidden>Sheneman, L. (2026). MindRouter: Open-source LLM inference gateway for institutional AI sovereignty. In Proceedings of the Practice and Experience in Advanced Research Computing Conference 2026 (PEARC '26). Association for Computing Machinery. https://doi.org/10.1145/3785462.3815861</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
     <!-- Contact Form                                                            -->
     <!-- ====================================================================== -->
     <section id="contact" class="contact-section py-5">
@@ -969,6 +1054,13 @@ response = client.chat.completions.create(
                 <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
                 &nbsp;&middot;&nbsp;
                 Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="#cite" class="text-muted"><i class="bi bi-journal-text"></i> Cite this work</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
             </p>
             <div class="d-inline-flex align-items-center gap-2 mt-2">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/NSF_logo.png" alt="NSF" height="20">

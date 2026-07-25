@@ -1,6 +1,45 @@
 /**
  * MindRouter Website - Theme toggle & smooth scrolling
  */
+// Copy-to-clipboard for the citation block ([data-copy-target] -> element id)
+(function() {
+    function copy(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        // Fallback for non-secure contexts (plain http)
+        return new Promise(function(resolve, reject) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy') ? resolve() : reject(new Error('copy blocked')); }
+            catch (e) { reject(e); }
+            finally { ta.remove(); }
+        });
+    }
+
+    document.querySelectorAll('[data-copy-target]').forEach(function(btn) {
+        var original = btn.innerHTML;
+        btn.addEventListener('click', function() {
+            var src = document.getElementById(btn.getAttribute('data-copy-target'));
+            if (!src) return;
+            // Collapse the soft-wrapped markup of the rendered citation to one line
+            var text = src.tagName === 'CODE'
+                ? src.textContent
+                : src.textContent.replace(/\s+/g, ' ').trim();
+            copy(text)
+                .then(function() { btn.innerHTML = '<i class="bi bi-check2"></i> Copied'; })
+                .catch(function() { btn.innerHTML = '<i class="bi bi-x-circle"></i> Copy failed'; })
+                .then(function() {
+                    setTimeout(function() { btn.innerHTML = original; }, 1500);
+                });
+        });
+    });
+})();
+
 (function() {
     // Theme toggle
     var btn = document.getElementById('themeToggleBtn');
