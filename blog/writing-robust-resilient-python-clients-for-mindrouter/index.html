@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Writing Robust, Resilient Python Clients for MindRouter — MindRouter Blog</title>
+    <meta name="description" content="A comprehensive guide to building production-grade client code against MindRouter&#x27;s OpenAI-compatible API">
+    <meta property="og:title" content="Writing Robust, Resilient Python Clients for MindRouter — MindRouter Blog">
+    <meta property="og:description" content="A comprehensive guide to building production-grade client code against MindRouter&#x27;s OpenAI-compatible API">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/">
+    <link rel="alternate" type="application/rss+xml" title="MindRouter Blog" href="/blog/feed.xml">
+    <meta property="article:published_time" content="2026-04-18T15:00:38+00:00">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/blog.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <p class="mb-3"><a href="/blog/" class="text-decoration-none text-muted" style="font-size:0.85rem;">&larr; All posts</a></p>
+                    <h1 class="mb-2">Writing Robust, Resilient Python Clients for MindRouter</h1>
+                    <p class="text-muted mb-4" style="font-size:0.9rem;"><time datetime="2026-04-18T15:00:38+00:00">April 18, 2026</time></p>
+                    <article class="blog-content">
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/8b1a/8b1a1fa4f29643a74d104ad46863446290b1009413134864d42aacd49a52dac1_786bf5dc.png" alt="mindrouter-image-2.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<h2>Introduction</h2>
+<p>Writing code that talks to an API might seem straightforward at first. Send a request, get a response, move on. But in the real world, things don’t always go that smoothly: networks hiccup, servers get busy, and requests occasionally fail for reasons outside your control. Building resilient, robust client code is about handling those moments gracefully so your application keeps working instead of breaking at the first sign of trouble. It’s not rocket science. You don’t need deep systems expertise, but it does take some thoughtful design and a few proven patterns. The payoff is huge: software that feels reliable, responsive, and trustworthy, even when the systems behind it are under stress.</p>
+<p>MindRouter exposes OpenAI-compatible <code>/v1</code> endpoints, which means you can use the standard OpenAI Python SDK, but writing <em>robust</em> client code for a self-hosted cluster requires understanding behaviors that differ from calling OpenAI's cloud API directly.</p>
+<p>This guide covers every <code>/v1</code> endpoint, every HTTP status code you might encounter, and well-tested patterns for retries, concurrency, streaming, rate limiting, and error handling. All examples use the official OpenAI Python SDK and are tested against MindRouter v2.4.0+.</p>
+<h3>Pro Tip:</h3>
+<p>If you are using Agentic Coding assistants (e.g. Claude Code, Codex, Forge Code, etc.), simply point them to this this Blog post to give them an instant head start to make resilient MindRouter client code!</p>
+<h3>Code:</h3>
+<p>All code in this blog post has been extracted into stand-alone, instructional Python scripts and tested against MindRouter!  You can find those scripts <A HREF="https://github.com/sheneman/mindrouter-robust-client">here.</A></p>
+<hr />
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#available-endpoints">Available Endpoints</a></li>
+<li><a href="#authentication">Authentication</a></li>
+<li><a href="#http-status-codes-reference">HTTP Status Codes Reference</a></li>
+<li><a href="#chat-completions">Chat Completions</a></li>
+<li><a href="#streaming-responses">Streaming Responses</a></li>
+<li><a href="#embeddings">Embeddings</a></li>
+<li><a href="#reranking-and-scoring">Reranking and Scoring</a></li>
+<li><a href="#image-generation">Image Generation</a></li>
+<li><a href="#voice-text-to-speech-and-transcription">Voice: Text-to-Speech and Transcription</a></li>
+<li><a href="#model-discovery">Model Discovery</a></li>
+<li><a href="#tokenization">Tokenization</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#retry-strategies-and-exponential-backoff">Retry Strategies and Exponential Backoff</a></li>
+<li><a href="#rate-limits-and-rpm-quotas">Rate Limits and RPM Quotas</a></li>
+<li><a href="#concurrency-and-adaptive-throttling">Concurrency and Adaptive Throttling</a></li>
+<li><a href="#timeouts-and-connection-configuration">Timeouts and Connection Configuration</a></li>
+<li><a href="#circuit-breakers">Circuit Breakers</a></li>
+<li><a href="#structured-output-and-json-mode">Structured Output and JSON Mode</a></li>
+<li><a href="#thinking-and-reasoning-mode">Thinking and Reasoning Mode</a></li>
+<li><a href="#tool-calling--function-calling">Tool Calling / Function Calling</a></li>
+<li><a href="#summary-of-best-practices">Summary of Best Practices</a></li>
+<li><a href="#conclusion-and-challenge">Conclusion and Challenge</a></li>
+</ol>
+<hr />
+<h2>Getting Started</h2>
+<p>Install the OpenAI Python SDK:</p>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>openai
+</code></pre></div>
+
+<p>Point it at your MindRouter instance by setting <code>base_url</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>Or use environment variables (no code changes needed):</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_BASE_URL</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>  <span class="c1"># picks up env vars automatically</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>That's It!!</h3>
+<p>Every standard OpenAI SDK call now routes through MindRouter, which handles backend selection, load balancing, failover, and fair-share scheduling transparently. On the client side, the OpenAI SDK also gives you a solid foundation out of the box: it manages HTTP connections efficiently with connection pooling, handles request serialization and response parsing, supports streaming via Server-Sent Events, and provides a structured exception hierarchy that maps cleanly to HTTP status codes. It also includes basic retry behavior with exponential backoff, timeout controls, and both synchronous and asynchronous interfaces, so you can scale from simple scripts to high-concurrency applications without changing libraries.</p>
+<p>With the OpenAI SDK in place, you have a clean and powerful entry point into MindRouter. The rest of this guide builds on that foundation, diving into the deeper patterns and techniques that let you <strong>directly control</strong> concurrency, manage retries and rate limits, reduce latency, optimize token usage, and handle failures gracefully, turning simple API calls into resilient, high-performance client systems.</p>
+<p><br></p>
+<hr />
+<h2>Available Endpoints</h2>
+<p>MindRouter exposes the following <code>/v1</code> endpoints:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/v1/chat/completions</code></td>
+<td>POST</td>
+<td>Chat completions (streaming and non-streaming)</td>
+</tr>
+<tr>
+<td><code>/v1/completions</code></td>
+<td>POST</td>
+<td>Legacy text completions</td>
+</tr>
+<tr>
+<td><code>/v1/embeddings</code></td>
+<td>POST</td>
+<td>Text embeddings</td>
+</tr>
+<tr>
+<td><code>/v1/rerank</code></td>
+<td>POST</td>
+<td>Document reranking (vLLM backends only)</td>
+</tr>
+<tr>
+<td><code>/v1/score</code></td>
+<td>POST</td>
+<td>Text similarity scoring (vLLM backends only)</td>
+</tr>
+<tr>
+<td><code>/v1/images/generations</code></td>
+<td>POST</td>
+<td>Image generation (FLUX and other diffusion models)</td>
+</tr>
+<tr>
+<td><code>/v1/audio/speech</code></td>
+<td>POST</td>
+<td>Text-to-speech</td>
+</tr>
+<tr>
+<td><code>/v1/audio/transcriptions</code></td>
+<td>POST</td>
+<td>Speech-to-text transcription</td>
+</tr>
+<tr>
+<td><code>/v1/models</code></td>
+<td>GET</td>
+<td>List available models</td>
+</tr>
+<tr>
+<td><code>/v1/tokenize</code></td>
+<td>POST</td>
+<td>Count tokens for a request</td>
+</tr>
+<tr>
+<td><code>/v1/ocr</code></td>
+<td>POST</td>
+<td>OCR via multimodal LLM (returns JSON)</td>
+</tr>
+<tr>
+<td><code>/v1/ocrmd</code></td>
+<td>POST</td>
+<td>OCR via multimodal LLM (returns Markdown)</td>
+</tr>
+</tbody>
+</table>
+<p><br></p>
+<hr />
+<h2>Authentication <br></h2>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/9cca/9cca0f6e5ec58df5ac753e94c0b54770b99d1f8c3e9498a8021aaa0c40935d5a_a8e9298c.png" alt="mindrouter-image-3.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>MindRouter accepts API keys via two methods:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Method 1: Authorization header (used automatically by the SDK)</span>
+<span class="c1"># Authorization: Bearer mr2_your_api_key_here</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Method 2: X-API-Key header (for custom HTTP clients)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;https://mindrouter.example.com/v1/chat/completions&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;X-API-Key&quot;</span><span class="p">:</span> <span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>API keys can have per-key RPM (requests per minute) limits and are associated with a user who belongs to a group with a token budget. Keys have a status (<code>ACTIVE</code>, <code>REVOKED</code>, <code>EXPIRED</code>, <code>SUSPENDED</code>) and an optional expiration date.</p>
+<p><br></p>
+<hr />
+<h2>HTTP Status Codes Reference <br></h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/9984/99847c63917330edac0443a7fb267a5ec532a26340a67c53b6947f82ecbf25af_5cf8d0c1.png" alt="mindrouter-image-4.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Every response from MindRouter returns one of the following HTTP status codes. Understanding these is critical for writing resilient client code.</p>
+<h3>Success</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>When You'll See It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200 OK</code></td>
+<td>Request completed successfully</td>
+<td>All non-streaming endpoints return 200 with the result JSON. Streaming endpoints also return 200 with <code>Content-Type: text/event-stream</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3>Client Errors (Do NOT Retry)</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Example Response</th>
+<th>Common Causes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400 Bad Request</code></td>
+<td>The request is malformed or invalid</td>
+<td><code>{"detail": "Invalid request format: 'messages' field is required"}</code></td>
+<td>Missing required fields, invalid JSON body, requesting multimodal on a text-only model, invalid <code>response_format</code></td>
+</tr>
+<tr>
+<td><code>401 Unauthorized</code></td>
+<td>Authentication failed</td>
+<td><code>{"detail": "Invalid API key"}</code></td>
+<td>Missing/invalid/expired/revoked API key, inactive user account</td>
+</tr>
+<tr>
+<td><code>403 Forbidden</code></td>
+<td>Authenticated but not permitted</td>
+<td><code>{"detail": "Image generation not enabled for your account"}</code></td>
+<td>Feature not enabled for user, content policy violation on image generation</td>
+</tr>
+<tr>
+<td><code>404 Not Found</code></td>
+<td>The requested model does not exist</td>
+<td><code>{"error": {"message": "The model 'nonexistent-model' does not exist", "type": "invalid_request_error", "code": "model_not_found"}}</code></td>
+<td>Typo in model name, model not loaded on any backend</td>
+</tr>
+<tr>
+<td><code>413 Payload Too Large</code></td>
+<td>Upload exceeds size limit</td>
+<td><code>{"detail": "File exceeds maximum size of 50MB"}</code></td>
+<td>OCR file too large</td>
+</tr>
+<tr>
+<td><code>422 Unprocessable Entity</code></td>
+<td>Valid request but cannot produce output</td>
+<td><code>{"detail": "Structured output was requested but the model's reasoning consumed the entire token budget..."}</code></td>
+<td>Structured output + thinking mode token conflict</td>
+</tr>
+</tbody>
+</table>
+<h3>Rate Limiting (Retry with Backoff)</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Example Response</th>
+<th>What To Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>429 Too Many Requests</code></td>
+<td>Rate limit or quota exceeded</td>
+<td><code>{"detail": "Rate limit exceeded: 60 requests per minute (current: 61)"}</code></td>
+<td>Implement exponential backoff. See <a href="#rate-limits-and-rpm-quotas">Rate Limits</a>.</td>
+</tr>
+<tr>
+<td><code>429 Too Many Requests</code></td>
+<td>Token quota exhausted</td>
+<td><code>{"detail": "Token quota exceeded"}</code></td>
+<td>Wait for quota period reset (daily/monthly). Reduce usage or request a quota increase.</td>
+</tr>
+</tbody>
+</table>
+<h3>Server Errors (Retry with Backoff)</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Example Response</th>
+<th>What To Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>502 Bad Gateway</code></td>
+<td>All backend attempts failed</td>
+<td><code>{"detail": "All 3 backend attempts failed. Last error: Backend returned 500"}</code></td>
+<td>MindRouter already retried internally (up to 3 attempts across different backends). Retry with backoff, but this indicates a systemic issue.</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>No capacity or no backends</td>
+<td><code>{"detail": "No backend capacity available (waited 150s)"}</code></td>
+<td>All backends are at max concurrency. Retry with backoff; consider reducing your concurrency.</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>No healthy backends</td>
+<td><code>{"detail": "No healthy backends available"}</code></td>
+<td>All backends are down or circuit-broken. Retry after a delay.</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>Capability mismatch</td>
+<td><code>{"detail": "No suitable backend: model_not_available"}</code></td>
+<td>The model exists but all backends serving it are unhealthy.</td>
+</tr>
+</tbody>
+</table>
+<h3>Key Insight: MindRouter Retries Internally</h3>
+<p>When a backend fails with a 5xx error or timeout, MindRouter automatically retries on a <em>different</em> backend (up to 3 attempts). By the time you receive a <code>502</code>, MindRouter has already exhausted its retry budget. A client-side retry may still succeed if the issue was transient across the cluster, but repeated 502s suggest a deeper problem.</p>
+<h3>Note on Retry-After Headers</h3>
+<p>MindRouter does <strong>not</strong> return <code>Retry-After</code> headers on 429 or 503 responses. Clients should implement their own exponential backoff strategy (covered below).</p>
+<hr />
+<h2>Chat Completions <br></h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
+  <img src="/blog/images/2026/04/18/a59b/a59b54ec7fa17bf6d7df5d2a043b044bc9e9a3cbd23119adc692f5c818702f2a_da55fc07.png" alt="ChatGPT Image Apr 18, 2026, 07_04_35 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>The primary endpoint for text generation:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain quantum entanglement in simple terms.&quot;</span><span class="p">},</span>
+    <span class="p">],</span>
+    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokens used: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Response format</h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chatcmpl-a1b2c3d4e5f6...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chat.completion&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1713400000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;choices&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quantum entanglement is...&quot;</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;finish_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;stop&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;usage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;prompt_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">28</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;completion_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;total_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">178</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Finish reasons</h3>
+<table>
+<thead>
+<tr>
+<th><code>finish_reason</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"stop"</code></td>
+<td>Model finished naturally or hit a stop sequence</td>
+</tr>
+<tr>
+<td><code>"length"</code></td>
+<td>Hit <code>max_tokens</code> limit — response is truncated</td>
+</tr>
+<tr>
+<td><code>"tool_calls"</code></td>
+<td>Model wants to call one or more tools</td>
+</tr>
+</tbody>
+</table>
+<p>Always check <code>finish_reason</code>. If it's <code>"length"</code>, the response is incomplete and you may want to continue the conversation or increase <code>max_tokens</code>.</p>
+<hr />
+<p><br></p>
+<h2>Streaming Responses</h2>
+<p>Streaming is essential for interactive applications — the user sees tokens as they're generated rather than waiting for the complete response:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Write a short story about a robot.&quot;</span><span class="p">}],</span>
+    <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">full_response</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">delta</span><span class="o">.</span><span class="n">content</span>
+    <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">full_response</span> <span class="o">+=</span> <span class="n">delta</span>
+<span class="nb">print</span><span class="p">()</span>  <span class="c1"># newline after stream completes</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Async streaming</h3>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncOpenAI</span>
+
+<span class="n">async_client</span> <span class="o">=</span> <span class="n">AsyncOpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stream_chat</span><span class="p">(</span><span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">prompt</span><span class="p">}],</span>
+        <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">full_response</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">delta</span><span class="o">.</span><span class="n">content</span>
+        <span class="k">if</span> <span class="n">delta</span><span class="p">:</span>
+            <span class="n">full_response</span> <span class="o">+=</span> <span class="n">delta</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">full_response</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Streaming error handling</h3>
+<p>Errors can occur at two points during streaming:</p>
+<ol>
+<li>
+<p><strong>Before the first chunk</strong> — MindRouter returns the error as an SSE event: <br>
+   <code>data: {"error": {"message": "Backend returned 500", "type": "backend_error", "code": 500}}
+   data: [DONE]</code>
+<br>
+<br>
+   The SDK raises an exception in this case.  <br></p>
+</li>
+<li>
+<p><strong>Mid-stream</strong> — The stream terminates abruptly without a <code>[DONE]</code> signal. The SDK raises an <code>APIConnectionError</code>. You must handle this gracefully.</p>
+</li>
+</ol>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stream_with_recovery</span><span class="p">(</span><span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stream a response with retry on mid-stream disconnect.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_retries</span><span class="p">):</span>
+        <span class="n">collected</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+                <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+                <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+                <span class="n">delta</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">delta</span><span class="o">.</span><span class="n">content</span>
+                <span class="k">if</span> <span class="n">delta</span><span class="p">:</span>
+                    <span class="n">collected</span> <span class="o">+=</span> <span class="n">delta</span>
+                    <span class="k">yield</span> <span class="n">delta</span>
+            <span class="k">return</span>  <span class="c1"># stream completed successfully</span>
+
+        <span class="k">except</span> <span class="p">(</span><span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span> <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="n">max_retries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="c1"># Append partial response and ask model to continue</span>
+            <span class="k">if</span> <span class="n">collected</span><span class="p">:</span>
+                <span class="n">messages</span> <span class="o">=</span> <span class="n">messages</span> <span class="o">+</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">collected</span><span class="p">},</span>
+                    <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Continue from where you left off.&quot;</span><span class="p">},</span>
+                <span class="p">]</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">attempt</span><span class="p">)</span>  <span class="c1"># backoff before retry</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Streaming best practices</h3>
+<ul>
+<li><strong>Always set a read timeout</strong> — A stalled backend can leave a stream hanging indefinitely.</li>
+<li><strong>Accumulate the full response</strong> — You'll want it for logging, storage, or retry context.</li>
+<li><strong>MindRouter retries internally before streaming starts</strong> — If MindRouter can't reach any backend, you get a clean error. Once streaming begins, MindRouter cannot retry (the HTTP response has already started).</li>
+</ul>
+<hr />
+<p><br></p>
+<h2>Embeddings</h2>
+<p>Generate vector embeddings for semantic search, clustering, and RAG pipelines:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;Qwen/Qwen3-Embedding-8B&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;The quick brown fox jumps over the lazy dog&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">embedding</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">embedding</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dimensions: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">embedding</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokens used: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Batch embeddings</h3>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">texts</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;Machine learning is a subset of artificial intelligence.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Deep learning uses neural networks with many layers.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Natural language processing handles human language.&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;Qwen/Qwen3-Embedding-8B&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="n">texts</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span><span class="si">}</span><span class="s2"> dimensions&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Embedding response format</h3>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;embedding&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;embedding&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.0123</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.0456</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0789</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Qwen/Qwen3-Embedding-8B&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;usage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;prompt_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;total_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr />
+<p><br></p>
+<h2>Reranking and Scoring</h2>
+<p>MindRouter exposes vLLM's reranking and scoring capabilities for RAG pipelines. These endpoints are only available on vLLM backends.</p>
+<p><br></p>
+<h3>Reranking</h3>
+<p>Rerank a set of documents against a query to improve retrieval relevance:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+<span class="c1"># The OpenAI SDK doesn&#39;t have a built-in rerank method,</span>
+<span class="c1"># so use httpx directly</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;https://mindrouter.example.com/v1/rerank&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer mr2_your_api_key_here&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;Qwen/Qwen3-Reranker-8B&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="s2">&quot;What is the capital of France?&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;documents&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;Paris is the capital and most populous city of France.&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Berlin is the capital of Germany.&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;The Eiffel Tower is located in Paris.&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;London is the capital of England.&quot;</span><span class="p">,</span>
+        <span class="p">],</span>
+        <span class="s2">&quot;top_n&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="s2">&quot;return_documents&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Score: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;relevance_score&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;document&#39;</span><span class="p">][:</span><span class="mi">60</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Scoring</h3>
+<p>Score similarity between text pairs:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;https://mindrouter.example.com/v1/score&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer mr2_your_api_key_here&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;Qwen/Qwen3-Reranker-8B&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;text_1&quot;</span><span class="p">:</span> <span class="s2">&quot;What is machine learning?&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;text_2&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;Machine learning is a branch of AI that learns from data.&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;The weather today is sunny and warm.&quot;</span><span class="p">,</span>
+        <span class="p">],</span>
+    <span class="p">},</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<p><strong>Note:</strong> Both <code>/v1/rerank</code> and <code>/v1/score</code> return <code>400 Bad Request</code> if the selected model routes to an Ollama backend, as these features require vLLM.</p>
+<hr />
+<p><br></p>
+<h2>Image Generation</h2>
+<p>Generate images using FLUX and other diffusion models:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;black-forest-labs/FLUX.2-dev&quot;</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;A serene mountain landscape at sunset, photorealistic&quot;</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="s2">&quot;1024x1024&quot;</span><span class="p">,</span>
+    <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">image_url</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">url</span>  <span class="c1"># or .b64_json if requested</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Image URL: </span><span class="si">{</span><span class="n">image_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Image generation specifics</h3>
+<ul>
+<li><strong>Content policy</strong>: MindRouter runs an LLM-as-judge content filter on all image prompts. Prompts that violate the content policy return <code>403 Forbidden</code>.</li>
+<li><strong>User permission</strong>: Image generation must be enabled for your account. If not, you'll receive <code>403 Forbidden</code>.</li>
+<li><strong>Longer timeouts</strong>: Image generation can take 10-30 seconds depending on model and size. Set your client timeout accordingly.</li>
+<li><strong>Allowed sizes</strong>: The administrator configures allowed image dimensions. Invalid sizes return <code>400 Bad Request</code>.</li>
+</ul>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># Handle image generation with appropriate timeout</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span><span class="mf">300.0</span><span class="p">,</span> <span class="n">connect</span><span class="o">=</span><span class="mf">5.0</span><span class="p">),</span>  <span class="c1"># 5 min for slow diffusion</span>
+<span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;black-forest-labs/FLUX.2-dev&quot;</span><span class="p">,</span>
+        <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;A robot painting a landscape&quot;</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="s2">&quot;1024x1024&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">PermissionDeniedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="c1"># 403: content policy violation or feature not enabled</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Denied: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">BadRequestError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="c1"># 400: invalid size, missing prompt, etc.</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bad request: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+</details>
+
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>Voice: Text-to-Speech and Transcription</h2>
+<h3>Text-to-Speech (TTS)</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">speech</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;tts-1&quot;</span><span class="p">,</span>
+    <span class="n">voice</span><span class="o">=</span><span class="s2">&quot;alloy&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello! This is MindRouter speaking.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Save to file</span>
+<span class="n">response</span><span class="o">.</span><span class="n">stream_to_file</span><span class="p">(</span><span class="s2">&quot;output.mp3&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Speech-to-Text (STT)</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;recording.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">audio_file</span><span class="p">:</span>
+    <span class="n">transcript</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">audio</span><span class="o">.</span><span class="n">transcriptions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;whisper-1&quot;</span><span class="p">,</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">audio_file</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">transcript</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<p><strong>Note:</strong> Voice endpoints must be enabled by the MindRouter administrator. If disabled, you'll receive <code>404 Not Found</code>.</p>
+<p><br></p>
+<hr />
+<h2>Model Discovery <br></h2>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/6c7b/6c7be2d16603ba215badd4a5e9c051ea9eb4566f1ad8343d0c3a7fb8a53bd1e7_18652437.png" alt="mindrouter-image-5.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>List all models available across healthy backends:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">models</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>Extended model metadata</h3>
+<p>MindRouter extends the standard OpenAI model response with additional fields:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;model&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1713400000</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;owned_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mindrouter&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;multimodal&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;embeddings&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;structured_output&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;thinking&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;backends&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;aspen1-gpu1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;aspen3-gpu1&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;context_length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">131072</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;model_max_context&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">131072</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;parameter_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;120B&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;quantization&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<p>Use this to discover capabilities before making requests — for example, check <code>capabilities.multimodal</code> before sending image inputs, or check <code>capabilities.thinking</code> before enabling reasoning mode.</p>
+<p><br></p>
+<hr />
+<h2>Tokenization</h2>
+<p>Count tokens before making a request — useful for quota management and prompt engineering:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;https://mindrouter.example.com/v1/tokenize&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer mr2_your_api_key_here&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are helpful.&quot;</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Count my tokens.&quot;</span><span class="p">},</span>
+        <span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input tokens: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model max length: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;max_model_len&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Estimated: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;is_estimate&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>When the backend supports exact tokenization (vLLM), <code>is_estimate</code> is <code>false</code>. For Ollama backends, MindRouter uses tiktoken as a fallback and <code>is_estimate</code> will be <code>true</code>.</p>
+<p><br></p>
+<hr />
+<h2>Error Handling</h2>
+<p>The OpenAI SDK maps HTTP status codes to a typed exception hierarchy. Use this to distinguish retryable from non-retryable errors:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+
+<span class="c1"># Exception hierarchy:</span>
+<span class="c1">#</span>
+<span class="c1"># openai.APIError (base)</span>
+<span class="c1">#   openai.APIStatusError</span>
+<span class="c1">#     openai.BadRequestError          → 400  (do NOT retry)</span>
+<span class="c1">#     openai.AuthenticationError      → 401  (do NOT retry)</span>
+<span class="c1">#     openai.PermissionDeniedError    → 403  (do NOT retry)</span>
+<span class="c1">#     openai.NotFoundError            → 404  (do NOT retry)</span>
+<span class="c1">#     openai.UnprocessableEntityError → 422  (do NOT retry)</span>
+<span class="c1">#     openai.RateLimitError           → 429  (RETRY with backoff)</span>
+<span class="c1">#     openai.InternalServerError      → 5xx  (RETRY with backoff)</span>
+<span class="c1">#   openai.APIConnectionError               (RETRY with backoff)</span>
+<span class="c1">#   openai.APITimeoutError                  (RETRY with backoff)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Comprehensive error handler</h3>
+<details>
+<summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1"># Errors worth Treing</span>
+<span class="n">RETRYABLE_ERRORS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span><span class="p">,</span>       <span class="c1"># 429</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">,</span>      <span class="c1"># timeout</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span>   <span class="c1"># network</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span><span class="p">,</span>  <span class="c1"># 500/502/503/504</span>
+<span class="p">)</span>
+
+<span class="c1"># Errors that will never succeed on retry</span>
+<span class="n">FATAL_ERRORS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">BadRequestError</span><span class="p">,</span>          <span class="c1"># 400</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">AuthenticationError</span><span class="p">,</span>      <span class="c1"># 401</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">PermissionDeniedError</span><span class="p">,</span>    <span class="c1"># 403</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">NotFoundError</span><span class="p">,</span>            <span class="c1"># 404</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">UnprocessableEntityError</span><span class="p">,</span> <span class="c1"># 422</span>
+<span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">call_with_error_handling</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Call an OpenAI SDK method with proper error classification.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">FATAL_ERRORS</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Non-retryable error (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span>  <span class="c1"># don&#39;t retry — fix the request</span>
+    <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rate limited: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span>  <span class="c1"># caller should implement backoff</span>
+    <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Server error (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span>  <span class="c1"># caller should retry with backoff</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span> <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connection issue: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span>  <span class="c1"># caller should retry with backoff</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Reading error details</h3>
+<p>MindRouter returns errors in two formats. The SDK parses both:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">try</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;nonexistent-model&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">}],</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">NotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>    <span class="c1"># 404</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Message: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>       <span class="c1"># &quot;The model &#39;nonexistent-model&#39; does not exist&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Body: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">body</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>             <span class="c1"># full error dict</span>
+
+    <span class="c1"># MindRouter 404 body format:</span>
+    <span class="c1"># {&quot;error&quot;: {&quot;message&quot;: &quot;...&quot;, &quot;type&quot;: &quot;invalid_request_error&quot;, &quot;code&quot;: &quot;model_not_found&quot;}}</span>
+</code></pre></div>
+
+<p><br></p>
+<hr />
+<h2>Retry Strategies and Exponential Backoff <br></h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/9e36/9e3669922e2dc6fc70ea3c6c9fed18ce5b7a38120064948338e1ea67fc31b882_a2cba327.png" alt="xxx111.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<h3>Level 1: SDK built-in retries (simplest)</h3>
+<p>The OpenAI SDK retries automatically on 429, 5xx, timeouts, and connection errors. The default is 2 retries with exponential backoff (0.5s initial, 8s max, randomized jitter):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Increase retry count from the default of 2</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Or override per-request</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">max_retries</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">}],</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<p>For many use cases, this is sufficient. The SDK handles jitter, backoff, and error classification for you.</p>
+<h3>Level 2: Tenacity (more control)</h3>
+<p>When you need custom retry logic such as different backoff curves, retry-on-specific-errors, or logging between retries, use the <code>tenacity</code> Python library:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>tenacity
+</code></pre></div>
+
+
+
+<br>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tenacity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">retry</span><span class="p">,</span>
+    <span class="n">stop_after_attempt</span><span class="p">,</span>
+    <span class="n">wait_random_exponential</span><span class="p">,</span>
+    <span class="n">retry_if_exception_type</span><span class="p">,</span>
+    <span class="n">before_sleep_log</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@retry</span><span class="p">(</span>
+    <span class="n">wait</span><span class="o">=</span><span class="n">wait_random_exponential</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">60</span><span class="p">),</span>
+    <span class="n">stop</span><span class="o">=</span><span class="n">stop_after_attempt</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span>
+    <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception_type</span><span class="p">((</span>
+        <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span><span class="p">,</span>
+        <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">,</span>
+        <span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span>
+        <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span><span class="p">,</span>
+    <span class="p">)),</span>
+    <span class="n">before_sleep</span><span class="o">=</span><span class="n">before_sleep_log</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">resilient_chat</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Chat completion with tenacity-managed retries.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<span class="c1"># Usage</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">resilient_chat</span><span class="p">(</span>
+    <span class="n">client</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">}],</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Level 3: Manual exponential backoff with jitter <br></h3>
+<p>For full control, especially when you need to adapt behavior based on the specific error:
+<br></p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">chat_with_backoff</span><span class="p">(</span>
+    <span class="n">client</span><span class="p">:</span> <span class="n">OpenAI</span><span class="p">,</span>
+    <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+    <span class="n">initial_delay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">max_delay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">,</span>
+    <span class="n">backoff_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">openai</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">ChatCompletion</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Chat completion with exponential backoff and full jitter.</span>
+
+<span class="sd">    Jitter prevents the &quot;thundering herd&quot; problem where many clients</span>
+<span class="sd">    retry simultaneously after a shared failure, overwhelming the server.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">delay</span> <span class="o">=</span> <span class="n">initial_delay</span>
+
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="n">max_retries</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="c1"># Full jitter: uniform random between 0 and calculated delay</span>
+            <span class="n">jittered_delay</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rate limited (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_retries</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">). &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;Waiting </span><span class="si">{</span><span class="n">jittered_delay</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s...&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jittered_delay</span><span class="p">)</span>
+            <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="n">backoff_factor</span><span class="p">,</span> <span class="n">max_delay</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="n">max_retries</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="c1"># Server errors get shorter initial backoff since MindRouter</span>
+            <span class="c1"># already retried internally</span>
+            <span class="n">jittered_delay</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Server error </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">). &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;Waiting </span><span class="si">{</span><span class="n">jittered_delay</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s...&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jittered_delay</span><span class="p">)</span>
+            <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="n">backoff_factor</span><span class="p">,</span> <span class="n">max_delay</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="p">(</span><span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span> <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="n">max_retries</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">jittered_delay</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jittered_delay</span><span class="p">)</span>
+            <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="n">backoff_factor</span><span class="p">,</span> <span class="n">max_delay</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Why jitter matters</h3>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/19/ea01/ea0159c7c75c814331f56fcc510388509393dada36f3938bbfdd07095cb7acdd_dd372dc6.png" alt="mindrouter-image-8.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Without jitter, if 100 clients all hit a rate limit at the same time, they all retry after exactly 1s, then 2s, then 4s.  This creates synchronized bursts that can keep the server overwhelmed. <strong>Full jitter</strong> (<code>random.uniform(0, delay)</code>) spreads retries uniformly across the backoff window, dramatically reducing burst pressure.</p>
+<p>The three common jitter strategies:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Formula</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No jitter</strong></td>
+<td><code>sleep(delay)</code></td>
+<td>Never (causes thundering herd)</td>
+</tr>
+<tr>
+<td><strong>Full jitter</strong></td>
+<td><code>sleep(random(0, delay))</code></td>
+<td>Best general-purpose choice</td>
+</tr>
+<tr>
+<td><strong>Equal jitter</strong></td>
+<td><code>sleep(delay/2 + random(0, delay/2))</code></td>
+<td>When you want a guaranteed minimum wait</td>
+</tr>
+<tr>
+<td><strong>Decorrelated jitter</strong></td>
+<td><code>sleep(min(max_delay, random(base, prev_delay * 3)))</code></td>
+<td>When retries are long-lived</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h2>Rate Limits and RPM Quotas <br></h2>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/5e70/5e7086b9f6c35cf77e979be8ea1d19adcdb02803f084e21c4e5a8b0585f8cfa5_a6335722.png" alt="111.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>MindRouter enforces two types of limits:</p>
+<h3>1. RPM (Requests Per Minute)</h3>
+<p>Each API key and/or user has an RPM limit. MindRouter tracks this using a Redis-backed 60-second sliding window across all workers. When exceeded, you receive:</p>
+<div class="codehilite"><pre><span></span><code>HTTP 429 Too Many Requests
+{&quot;detail&quot;: &quot;Rate limit exceeded: 60 requests per minute (current: 61)&quot;}
+</code></pre></div>
+
+<p><br></p>
+<h3>2. Token Quotas</h3>
+<p>Each user belongs to a group with a token budget (daily or monthly). When the budget is exhausted:</p>
+<div class="codehilite"><pre><span></span><code>HTTP 429 Too Many Requests
+{&quot;detail&quot;: &quot;Token quota exceeded&quot;}
+</code></pre></div>
+
+<p><br></p>
+<h3>How to handle rate limits</h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_rate_limits</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Differentiate between RPM limits and quota exhaustion.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="s2">&quot;token quota exceeded&quot;</span> <span class="ow">in</span> <span class="n">error_msg</span><span class="p">:</span>
+            <span class="c1"># Quota is exhausted for the period — retrying won&#39;t help</span>
+            <span class="c1"># until the quota resets (daily/monthly)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Token quota exhausted. Wait for quota reset or contact admin.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+        <span class="k">elif</span> <span class="s2">&quot;rate limit exceeded&quot;</span> <span class="ow">in</span> <span class="n">error_msg</span><span class="p">:</span>
+            <span class="c1"># RPM limit — wait and retry</span>
+            <span class="c1"># Since MindRouter doesn&#39;t send Retry-After, use backoff</span>
+            <span class="n">wait_time</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RPM limit hit. Waiting </span><span class="si">{</span><span class="n">wait_time</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s...&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait_time</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Client-side rate limiting (proactive)</h3>
+<p>Rather than waiting for 429s, pace your requests to stay under the limit:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">RPMThrottle</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Client-side RPM limiter using a token bucket.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rpm</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rpm</span> <span class="o">=</span> <span class="n">rpm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interval</span> <span class="o">=</span> <span class="mf">60.0</span> <span class="o">/</span> <span class="n">rpm</span>  <span class="c1"># seconds between requests</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_request</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+            <span class="n">elapsed</span> <span class="o">=</span> <span class="n">now</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_request</span>
+            <span class="k">if</span> <span class="n">elapsed</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">interval</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interval</span> <span class="o">-</span> <span class="n">elapsed</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_request</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+
+
+<span class="c1"># Usage</span>
+<span class="n">throttle</span> <span class="o">=</span> <span class="n">RPMThrottle</span><span class="p">(</span><span class="n">rpm</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>  <span class="c1"># stay under 60 RPM limit</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">throttled_chat</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">messages</span><span class="p">):</span>
+    <span class="k">await</span> <span class="n">throttle</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Track your token usage</h3>
+<p>Monitor the <code>usage</code> field in every response to stay aware of your consumption relative to your quota:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">UsageTracker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Track cumulative token usage across requests.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_prompt_tokens</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_completion_tokens</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">usage</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_prompt_tokens</span> <span class="o">+=</span> <span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_completion_tokens</span> <span class="o">+=</span> <span class="n">usage</span><span class="o">.</span><span class="n">completion_tokens</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">total_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_prompt_tokens</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_completion_tokens</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Requests: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">request_count</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Prompt tokens: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_prompt_tokens</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Completion tokens: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_completion_tokens</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total tokens: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="n">tracker</span> <span class="o">=</span> <span class="n">UsageTracker</span><span class="p">()</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">}],</span>
+<span class="p">)</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">record</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="p">)</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
+</code></pre></div>
+
+<p><br></p>
+<hr />
+<h2>Concurrency and Adaptive Throttling</h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/19/fd08/fd0880e0be5253407f7009d38dc6dade4ad3704c93c16e70d5487201513ec62d_955a07f4.png" alt="rrr.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<h3>Basic async concurrency with semaphore</h3>
+<p>Use <code>asyncio.Semaphore</code> to cap the number of in-flight requests:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncOpenAI</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">AsyncOpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Start conservative — you can increase if you&#39;re not hitting limits</span>
+<span class="n">MAX_CONCURRENT</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">MAX_CONCURRENT</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bounded_chat</span><span class="p">(</span><span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">semaphore</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+            <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_batch</span><span class="p">(</span><span class="n">prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">bounded_chat</span><span class="p">([{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">p</span><span class="p">}])</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prompts</span>
+    <span class="p">]</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">,</span> <span class="n">return_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Separate successes from failures</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Prompt </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">)]</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Adaptive concurrency (reduce on 429, increase on success)</h3>
+<p>This is the most sophisticated pattern, dynamically adjust your concurrency based on server feedback:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openai</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AdaptiveClient</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Dynamically adjusts concurrency based on server responses.</span>
+
+<span class="sd">    - Halves concurrency on 429 (rate limit)</span>
+<span class="sd">    - Reduces by 25% on 503 (no capacity)</span>
+<span class="sd">    - Gradually increases concurrency on sustained success</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">AsyncOpenAI</span><span class="p">,</span>
+        <span class="n">initial_concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">min_concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">max_concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">recovery_interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>  <span class="c1"># seconds between increases</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">=</span> <span class="n">initial_concurrency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_concurrency</span> <span class="o">=</span> <span class="n">min_concurrency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_concurrency</span> <span class="o">=</span> <span class="n">max_concurrency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recovery_interval</span> <span class="o">=</span> <span class="n">recovery_interval</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">initial_concurrency</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_reduction</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_consecutive_successes</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_adjust_concurrency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">new_limit</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_concurrency</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_concurrency</span><span class="p">,</span> <span class="n">new_limit</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">new_limit</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span><span class="p">:</span>
+                <span class="n">old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">=</span> <span class="n">new_limit</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">new_limit</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_last_reduction</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_consecutive_successes</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concurrency adjusted: </span><span class="si">{</span><span class="n">old</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">new_limit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_maybe_increase</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_consecutive_successes</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_reduction</span>
+            <span class="c1"># Only increase if we&#39;ve had sustained success after a cooldown</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">elapsed</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">recovery_interval</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_consecutive_successes</span> <span class="o">&gt;=</span> <span class="mi">20</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_concurrency</span>
+            <span class="p">):</span>
+                <span class="n">new_limit</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_concurrency</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">=</span> <span class="n">new_limit</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">new_limit</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_consecutive_successes</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concurrency increased to </span><span class="si">{</span><span class="n">new_limit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span> <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make a chat request with adaptive concurrency and retry.&quot;&quot;&quot;</span>
+        <span class="n">delay</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_retries</span><span class="p">):</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                        <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                        <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_maybe_increase</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">response</span>
+
+                <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span><span class="p">:</span>
+                    <span class="c1"># Aggressive reduction — halve concurrency</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_concurrency</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">jitter</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+                    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jitter</span><span class="p">)</span>
+                    <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">503</span><span class="p">:</span>
+                        <span class="c1"># Moderate reduction — cluster is overloaded</span>
+                        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_concurrency</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concurrency</span> <span class="o">*</span> <span class="mf">0.75</span><span class="p">))</span>
+                    <span class="n">jitter</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+                    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jitter</span><span class="p">)</span>
+                    <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="p">(</span><span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span> <span class="n">openai</span><span class="o">.</span><span class="n">APITimeoutError</span><span class="p">):</span>
+                    <span class="n">jitter</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+                    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">jitter</span><span class="p">)</span>
+                    <span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">delay</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed after </span><span class="si">{</span><span class="n">max_retries</span><span class="si">}</span><span class="s2"> attempts&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># Usage</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">async_client</span> <span class="o">=</span> <span class="n">AsyncOpenAI</span><span class="p">(</span>
+        <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">adaptive</span> <span class="o">=</span> <span class="n">AdaptiveClient</span><span class="p">(</span><span class="n">async_client</span><span class="p">,</span> <span class="n">initial_concurrency</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+
+    <span class="n">prompts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Write a haiku about topic </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)]</span>
+
+    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">adaptive</span><span class="o">.</span><span class="n">chat</span><span class="p">([{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">p</span><span class="p">}])</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prompts</span>
+    <span class="p">]</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">,</span> <span class="n">return_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">successes</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">)]</span>
+    <span class="n">failures</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">)]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Completed: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">successes</span><span class="p">)</span><span class="si">}</span><span class="s2">, Failed: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+<br>
+</details>
+<p><br></p>
+<h3>How to choose your concurrency level</h3>
+<p>MindRouter's backend concurrency is configured per-backend via <code>max_concurrent</code>. The total cluster capacity is the sum across all backends serving your model. As a client, you don't know this number directly, but you can infer it:</p>
+<ul>
+<li><strong>Start conservative</strong> (5-10 concurrent requests)</li>
+<li><strong>Increase until you start seeing 503s</strong> — that's the cluster's capacity ceiling</li>
+<li><strong>Set your steady-state at ~75% of that ceiling</strong> to leave headroom for other users and retry bursts</li>
+<li><strong>Use adaptive concurrency</strong> to automatically find and maintain the right level</li>
+</ul>
+<hr />
+<p><br></p>
+<h2>Timeouts and Connection Configuration <br></h2>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/c63f/c63fbc2df37606225f7524edc580ff5ec2c114d90d009909149515101cf2c331_fbd6029f.png" alt="mindrouter-image-7.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>MindRouter's internal timeout for backend requests is <strong>180 seconds per attempt</strong> (3 minutes). For large models with long prefill times, responses can legitimately take this long. Your client timeout must accommodate this.<br></p>
+<h3>Recommended timeout configuration</h3>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span><span class="p">,</span> <span class="n">AsyncOpenAI</span>
+
+<span class="c1"># Sync client</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span>
+        <span class="mf">200.0</span><span class="p">,</span>       <span class="c1"># overall timeout — slightly above MindRouter&#39;s 180s per-attempt</span>
+        <span class="n">connect</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="c1"># fail fast on DNS/network issues</span>
+        <span class="n">read</span><span class="o">=</span><span class="mf">200.0</span><span class="p">,</span>  <span class="c1"># allow slow model generation</span>
+        <span class="n">write</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>  <span class="c1"># request upload should be fast</span>
+        <span class="n">pool</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>   <span class="c1"># don&#39;t wait too long for an HTTP connection from the pool</span>
+    <span class="p">),</span>
+    <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Async client with custom connection pool</span>
+<span class="n">http_client</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span>
+    <span class="n">limits</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Limits</span><span class="p">(</span>
+        <span class="n">max_connections</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>          <span class="c1"># total connection pool size</span>
+        <span class="n">max_keepalive_connections</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="c1"># idle connections to keep warm</span>
+    <span class="p">),</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span><span class="mf">200.0</span><span class="p">,</span> <span class="n">connect</span><span class="o">=</span><span class="mf">5.0</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">async_client</span> <span class="o">=</span> <span class="n">AsyncOpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+    <span class="n">http_client</span><span class="o">=</span><span class="n">http_client</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<h3>Timeout guidelines</h3>
+<table>
+<thead>
+<tr>
+<th>Use Case</th>
+<th>Recommended Timeout</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chat (small models, &lt;14B)</td>
+<td>60s</td>
+<td>Fast inference, short responses</td>
+</tr>
+<tr>
+<td>Chat (large models, 70B+)</td>
+<td>200s</td>
+<td>Long prefill, especially with large context</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td>30s</td>
+<td>Typically fast</td>
+</tr>
+<tr>
+<td>Reranking</td>
+<td>60s</td>
+<td>Depends on document count</td>
+</tr>
+<tr>
+<td>Image generation</td>
+<td>300s</td>
+<td>Diffusion models are slow</td>
+</tr>
+<tr>
+<td>Streaming (initial connect)</td>
+<td>200s</td>
+<td>MindRouter may queue before first chunk</td>
+</tr>
+<tr>
+<td>Streaming (between chunks)</td>
+<td>30s</td>
+<td>Once streaming starts, chunks arrive frequently</td>
+</tr>
+</tbody>
+</table>
+<h3>Cleanup</h3>
+<p>Always clean up async clients to avoid connection leaks:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Context manager (preferred)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">AsyncOpenAI</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;mr2_your_api_key_here&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="c1"># Or manual cleanup</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">AsyncOpenAI</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2>Circuit Breakers <br></h2>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/18/aace/aace5d74971b998971ba7eef6432d634af04692c220ec68e95dba7d10f12b819_053c6203.png" alt="mindrouter-image-6.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>If MindRouter itself is down or experiencing cascading failures, you don't want to keep hammering it with retries. A circuit breaker stops requests fast and periodically probes to check recovery.</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CircuitBreaker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Three states:</span>
+<span class="sd">    - CLOSED: normal operation, requests pass through</span>
+<span class="sd">    - OPEN: failing fast, no requests sent</span>
+<span class="sd">    - HALF_OPEN: testing if service recovered (one probe request)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">failure_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">reset_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failure_threshold</span> <span class="o">=</span> <span class="n">failure_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_timeout</span> <span class="o">=</span> <span class="n">reset_timeout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failures</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_failure_time</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;closed&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">before_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Call before making a request. Raises if circuit is open.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_failure_time</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_timeout</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;half_open&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CircuitOpenError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Circuit breaker is OPEN. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Retry in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">reset_timeout</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">last_failure_time</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">s&quot;</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Call after a successful request.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failures</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;closed&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Call after a failed request.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failures</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_failure_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">failures</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">failure_threshold</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;open&quot;</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CircuitOpenError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="c1"># Usage with OpenAI client</span>
+<span class="n">breaker</span> <span class="o">=</span> <span class="n">CircuitBreaker</span><span class="p">(</span><span class="n">failure_threshold</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">reset_timeout</span><span class="o">=</span><span class="mf">30.0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">safe_chat</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">):</span>
+    <span class="n">breaker</span><span class="o">.</span><span class="n">before_request</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+        <span class="n">breaker</span><span class="o">.</span><span class="n">on_success</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">response</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">openai</span><span class="o">.</span><span class="n">APIConnectionError</span><span class="p">,</span> <span class="n">openai</span><span class="o">.</span><span class="n">InternalServerError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">breaker</span><span class="o">.</span><span class="n">on_failure</span><span class="p">()</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">RateLimitError</span><span class="p">:</span>
+        <span class="c1"># Rate limits are not server failures — don&#39;t trip the breaker</span>
+        <span class="k">raise</span>
+</code></pre></div>
+
+
+
+---
+
+## Structured Output and JSON Mode
+
+MindRouter supports structured output (JSON mode) for models that support it. There are two levels:
+
+### JSON Object mode
+
+Forces the model to return valid JSON:
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Return a JSON object with fields: name, age, city.&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Tell me about Alice who is 30 and lives in Portland.&quot;</span><span class="p">},</span>
+    <span class="p">],</span>
+    <span class="n">response_format</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_object&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># {&quot;name&quot;: &quot;Alice&quot;, &quot;age&quot;: 30, &quot;city&quot;: &quot;Portland&quot;}</span>
+</code></pre></div>
+
+
+
+<br>
+### JSON Schema mode
+
+Forces the model to conform to a specific schema:
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Extract: Alice is 30 and lives in Portland.&quot;</span><span class="p">},</span>
+    <span class="p">],</span>
+    <span class="n">response_format</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_schema&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;json_schema&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;person&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">},</span>
+                    <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;integer&quot;</span><span class="p">},</span>
+                    <span class="s2">&quot;city&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">},</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;city&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+</details>
+
+<p><br></p>
+<h3>Structured output with thinking mode — watch for 422 <br></h3>
+<p>When you combine structured output with thinking/reasoning mode, the model may use all its tokens on reasoning and produce no structured content. MindRouter returns <code>422 Unprocessable Entity</code> in this case:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">try</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;Qwen/Qwen3.5-122B-A10B-FP8&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Complex math problem...&quot;</span><span class="p">}],</span>
+        <span class="n">response_format</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_object&quot;</span><span class="p">},</span>
+        <span class="n">extra_body</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;think&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+        <span class="n">max_tokens</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>  <span class="c1"># too few tokens for reasoning + output</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="n">openai</span><span class="o">.</span><span class="n">UnprocessableEntityError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="c1"># Increase max_tokens or reduce reasoning_effort</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;422: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2>Thinking and Reasoning Mode</h2>
+<p>MindRouter supports reasoning/thinking mode for models that support it (Qwen3, Qwen3.5, GPT-OSS, etc.). The thinking content appears in a separate field:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;Qwen/Qwen3.5-122B-A10B-FP8&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is 15</span><span class="si">% o</span><span class="s2">f 847?&quot;</span><span class="p">}],</span>
+    <span class="n">extra_body</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;think&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>  <span class="c1"># boolean for qwen-style models</span>
+<span class="p">)</span>
+
+<span class="c1"># Access reasoning content</span>
+<span class="n">choice</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;reasoning_content&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reasoning_content</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Thinking: </span><span class="si">{</span><span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reasoning_content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Answer: </span><span class="si">{</span><span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>For GPT-OSS models, use a string for reasoning effort level:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Solve this step by step...&quot;</span><span class="p">}],</span>
+    <span class="n">extra_body</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;think&quot;</span><span class="p">:</span> <span class="s2">&quot;medium&quot;</span><span class="p">},</span>  <span class="c1"># &quot;low&quot;, &quot;medium&quot;, or &quot;high&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2>Tool Calling / Function Calling</h2>
+<p>MindRouter supports OpenAI-compatible tool calling for models with tool support, but it is important to check <code>capabilities.tools</code> in the <code>/v1/models</code> response to verify a model supports tool calling before using it:</p>
+<details>
+  <summary><strong>Click to expand</strong></summary>
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="n">tools</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;function&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;get_weather&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Get the current weather for a location&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;City and state, e.g. &#39;San Francisco, CA&#39;&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;enum&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;celsius&quot;</span><span class="p">,</span> <span class="s2">&quot;fahrenheit&quot;</span><span class="p">],</span>
+                    <span class="p">},</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What&#39;s the weather in Moscow, Idaho?&quot;</span><span class="p">}],</span>
+    <span class="n">tools</span><span class="o">=</span><span class="n">tools</span><span class="p">,</span>
+    <span class="n">tool_choice</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">choice</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">if</span> <span class="n">choice</span><span class="o">.</span><span class="n">finish_reason</span> <span class="o">==</span> <span class="s2">&quot;tool_calls&quot;</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">tool_call</span> <span class="ow">in</span> <span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">arguments</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Call </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> with </span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Execute the tool, then send results back</span>
+        <span class="n">tool_result</span> <span class="o">=</span> <span class="n">get_weather</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>  <span class="c1"># your implementation</span>
+
+        <span class="n">followup</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="s2">&quot;openai/gpt-oss-120b&quot;</span><span class="p">,</span>
+            <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+                <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What&#39;s the weather in Moscow, Idaho?&quot;</span><span class="p">},</span>
+                <span class="n">choice</span><span class="o">.</span><span class="n">message</span><span class="p">,</span>  <span class="c1"># assistant&#39;s tool call</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;tool&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;tool_call_id&quot;</span><span class="p">:</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">tool_result</span><span class="p">),</span>
+                <span class="p">},</span>
+            <span class="p">],</span>
+            <span class="n">tools</span><span class="o">=</span><span class="n">tools</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p><br></p>
+<hr />
+<h2>Summary of Best Practices</h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/19/3c0c/3c0cf5f29b09c55743e267c3efd30bc4289fa333a986a678159e501e589d8b38_43579f64.png" alt="fff.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<ul>
+<li>
+<p><strong>Use the OpenAI SDK</strong><br />
+  It handles the wire protocol, SSE parsing for streaming, connection pooling, and basic retries. Simply point <code>base_url</code> at MindRouter and you get compatibility plus a solid client foundation with minimal effort.</p>
+</li>
+<li>
+<p><strong>Set appropriate timeouts</strong><br />
+  MindRouter’s per-attempt backend timeout is 180s. Use ~200s for large models or long context requests, and shorter timeouts (30–60s) for fast operations like embeddings. Always set connect and read timeouts explicitly to avoid hanging requests.</p>
+</li>
+<li>
+<p><strong>Implement exponential backoff with full jitter</strong><br />
+  Use <code>random.uniform(0, delay)</code> to spread retries and avoid thundering herd effects. The SDK provides basic retries, but custom logic lets you tune behavior based on workload and error type.</p>
+</li>
+<li>
+<p><strong>Classify errors correctly</strong><br />
+  Only retry transient failures (429, 5xx, timeouts, connection errors). Treat 400, 401, 403, 404, and 422 as fatal and fix the request instead of retrying.</p>
+</li>
+<li>
+<p><strong>Respect rate limits and quotas</strong><br />
+  Distinguish between RPM limits and token quota exhaustion. Back off and retry for RPM limits, but stop and wait for reset when quotas are exhausted. Consider adding client-side throttling to stay under limits proactively.</p>
+</li>
+<li>
+<p><strong>Control concurrency deliberately</strong><br />
+  Start with low concurrency (5–10), increase gradually, and watch for 503 or 429 signals. Use semaphores or adaptive concurrency to avoid overwhelming the cluster.</p>
+</li>
+<li>
+<p><strong>Use streaming for interactive workloads</strong><br />
+  Streaming reduces perceived latency and improves UX. Always handle mid-stream interruptions and be prepared to resume if needed.</p>
+</li>
+<li>
+<p><strong>Track usage and monitor tokens</strong><br />
+  Capture <code>response.usage</code> to understand consumption, control costs, and stay within quota. This is especially important for batch or agentic workflows.</p>
+</li>
+<li>
+<p><strong>Leverage model metadata</strong><br />
+  Use <code>/v1/models</code> to check capabilities like tools, structured output, or multimodal support before making requests. This avoids preventable 400 and 422 errors.</p>
+</li>
+<li>
+<p><strong>Tune connection pooling for scale</strong><br />
+  For async workloads, configure <code>httpx</code> limits to support your concurrency level. Proper pooling reduces latency and avoids connection bottlenecks.</p>
+</li>
+<li>
+<p><strong>Use circuit breakers for resilience</strong><br />
+  If repeated failures occur, stop sending requests temporarily and probe for recovery. This prevents cascading failures and protects both your system and the cluster.</p>
+</li>
+<li>
+<p><strong>Log and observe everything</strong><br />
+  Log retries, latency, errors, and token usage. Observability is key to tuning performance and diagnosing issues in production.</p>
+</li>
+<li>
+<p><strong>Design for shared infrastructure</strong><br />
+  MindRouter is a shared resource under variable load. Build clients that are cooperative, adaptive, and efficient rather than aggressive or bursty.</p>
+</li>
+</ul>
+<p>These practices turn simple API usage into production-grade systems that are stable, efficient, and resilient under real-world conditions.</p>
+<h2><br></h2>
+<h2>Conclusion and Challenge</h2>
+<p>MindRouter is designed to do everything it can to provide a robust and reliable experience out of the box, including fair-share load balancing, automatic retries across backends, and clear, consistent error and warning messages using standard HTTP responses. Even with these built-in protections, resilient client design remains essential because MindRouter is a shared resource operating under variable load and real-world systems are dynamic and occasionally unpredictable. By understanding the full lifecycle of a request and applying patterns like exponential backoff with jitter, adaptive concurrency, circuit breakers, and proper timeout configuration, you can ensure your applications remain stable and responsive even under load, contention, or partial failure.</p>
+<p>The goal is to transform uncertainty into reliability so your software continues to deliver a smooth user experience regardless of what is happening behind the scenes. A well-designed client does not just handle failures, it anticipates them and recovers gracefully while making efficient use of shared infrastructure. MindRouter provides the foundation, but the real power comes from pairing it with thoughtful client engineering that fully leverages its capabilities across heterogeneous backends and production workloads. </p>
+<h4><em>Build boldly, push the limits, and create resilient tools and workflows that thrive on MindRouter.</em></h4>
+<p><br></p>
+<hr />
+<h2>References and Further Reading</h2>
+<ol>
+<li>
+<p><a href="https://github.com/openai/openai-python">OpenAI Python Client</a><br />
+   Official Python client library for the OpenAI API; supports sync/async clients, built-in retries, and streaming via httpx.</p>
+</li>
+<li>
+<p><a href="https://platform.openai.com/docs/guides/error-codes">OpenAI Error Codes Guide</a><br />
+   Comprehensive reference for API error codes (400, 401, 429, 500, etc.) with troubleshooting steps.</p>
+</li>
+<li>
+<p><a href="https://platform.openai.com/docs/guides/rate-limits">OpenAI Rate Limits Guide</a><br />
+   Explains RPM/TPM limits, usage tiers, rate-limit headers, and retry best practices.</p>
+</li>
+<li>
+<p><a href="https://platform.openai.com/docs/guides/streaming-responses">Streaming Responses Guide</a><br />
+   How to consume Chat Completions as server-sent events in real time.</p>
+</li>
+<li>
+<p><a href="https://github.com/openai/openai-cookbook/blob/main/examples/How_to_handle_rate_limits.ipynb">Handling Rate Limits (OpenAI Cookbook)</a><br />
+   Jupyter notebook demonstrating retry strategies using Tenacity and backoff libraries, plus fallback model patterns.</p>
+</li>
+<li>
+<p><a href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">Exponential Backoff and Jitter (AWS)</a><br />
+   Classic reference comparing full jitter, equal jitter, and decorrelated jitter strategies for avoiding thundering herds.</p>
+</li>
+<li>
+<p><a href="https://github.com/jd/tenacity">Tenacity Library</a><br />
+   General-purpose retry library with decorators for exponential backoff, stop conditions, and custom wait strategies.</p>
+</li>
+<li>
+<p><a href="https://www.python-httpx.org/advanced/timeouts/">httpx Timeout Configuration</a><br />
+   Documentation for configuring connect, read, write, and pool timeouts in the HTTP client underlying the OpenAI SDK.</p>
+</li>
+<li>
+<p><a href="https://martinfowler.com/bliki/CircuitBreaker.html">Circuit Breaker Pattern (Martin Fowler)</a><br />
+   Authoritative explanation of the closed/open/half-open circuit breaker pattern for protecting against cascading failures.</p>
+</li>
+<li>
+<p><a href="https://docs.python.org/3/library/asyncio-sync.html">asyncio Synchronization Primitives</a><br />
+    Official docs for <code>asyncio.Semaphore</code> and other primitives used for bounding concurrency.</p>
+</li>
+</ol>
+                    </article>
+                    <hr class="my-5">
+                    <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">
+                        <a class="flex-fill text-start text-decoration-none" href="/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/"><span class="d-block text-muted" style="font-size:0.78rem;">&larr; Newer post</span><span>Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web</span></a>
+                        <a class="flex-fill text-end text-decoration-none" href="/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/"><span class="d-block text-muted" style="font-size:0.78rem;">&rarr; Older post</span><span>What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="site-footer py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="/blog/feed.xml" class="text-muted"><i class="bi bi-rss"></i> RSS</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "dateModified": "2026-07-27T12:16:54+00:00",
+    "datePublished": "2026-04-18T15:00:38+00:00",
+    "description": "A comprehensive guide to building production-grade client code against MindRouter's OpenAI-compatible API",
+    "headline": "Writing Robust, Resilient Python Clients for MindRouter",
+    "image": [
+        "https://mindrouter.ai/blog/images/2026/04/18/8b1a/8b1a1fa4f29643a74d104ad46863446290b1009413134864d42aacd49a52dac1_786bf5dc.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/9cca/9cca0f6e5ec58df5ac753e94c0b54770b99d1f8c3e9498a8021aaa0c40935d5a_a8e9298c.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/9984/99847c63917330edac0443a7fb267a5ec532a26340a67c53b6947f82ecbf25af_5cf8d0c1.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/a59b/a59b54ec7fa17bf6d7df5d2a043b044bc9e9a3cbd23119adc692f5c818702f2a_da55fc07.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/6c7b/6c7be2d16603ba215badd4a5e9c051ea9eb4566f1ad8343d0c3a7fb8a53bd1e7_18652437.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/9e36/9e3669922e2dc6fc70ea3c6c9fed18ce5b7a38120064948338e1ea67fc31b882_a2cba327.png",
+        "https://mindrouter.ai/blog/images/2026/04/19/ea01/ea0159c7c75c814331f56fcc510388509393dada36f3938bbfdd07095cb7acdd_dd372dc6.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/5e70/5e7086b9f6c35cf77e979be8ea1d19adcdb02803f084e21c4e5a8b0585f8cfa5_a6335722.png",
+        "https://mindrouter.ai/blog/images/2026/04/19/fd08/fd0880e0be5253407f7009d38dc6dade4ad3704c93c16e70d5487201513ec62d_955a07f4.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/c63f/c63fbc2df37606225f7524edc580ff5ec2c114d90d009909149515101cf2c331_fbd6029f.png",
+        "https://mindrouter.ai/blog/images/2026/04/18/aace/aace5d74971b998971ba7eef6432d634af04692c220ec68e95dba7d10f12b819_053c6203.png",
+        "https://mindrouter.ai/blog/images/2026/04/19/3c0c/3c0cf5f29b09c55743e267c3efd30bc4289fa333a986a678159e501e589d8b38_43579f64.png"
+    ],
+    "mainEntityOfPage": "https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/",
+    "publisher": {
+        "@type": "Organization",
+        "name": "MindRouter"
+    },
+    "url": "https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/"
+}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

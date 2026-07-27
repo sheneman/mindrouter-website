@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing — MindRouter Blog</title>
+    <meta name="description" content="When you send a request to MindRouter, whether it&#x27;s a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated s…">
+    <meta property="og:title" content="What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing — MindRouter Blog">
+    <meta property="og:description" content="When you send a request to MindRouter, whether it&#x27;s a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated s…">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/">
+    <link rel="alternate" type="application/rss+xml" title="MindRouter Blog" href="/blog/feed.xml">
+    <meta property="article:published_time" content="2026-03-22T18:42:47+00:00">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/blog.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <p class="mb-3"><a href="/blog/" class="text-decoration-none text-muted" style="font-size:0.85rem;">&larr; All posts</a></p>
+                    <h1 class="mb-2">What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing</h1>
+                    <p class="text-muted mb-4" style="font-size:0.9rem;"><time datetime="2026-03-22T18:42:47+00:00">March 22, 2026</time></p>
+                    <article class="blog-content">
+<p>When you send a request to MindRouter, whether it's a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated sequence of steps before a single token is generated. Behind the scenes, MindRouter authenticates your identity, translates your request into a universal format, applies fair-share scheduling to balance load across users, selects the optimal GPU backend, manages retries on failure, and tracks every token for quota enforcement.</p>
+<p>This post walks through that entire journey in detail. Whether you're a developer building on our API, a researcher curious about the infrastructure, or an administrator tuning the cluster, understanding this pipeline will help you get the most out of MindRouter.</p>
+<h2>The Big Picture</h2>
+<p>Every request passes through these stages in order:</p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/03/22/2327/23271c0f201bc24b560b3dab0502e824eb11e6dbf081ff026d519e033402fc55_94734e1c.png" alt="figure1a.png" style="width: 100%; height: auto;">
+</div>
+
+<p>Let's walk through each step.</p>
+<h2>Step 1: API Entry Point</h2>
+<p>Every request enters through MindRouter's multi-format REST API. Unlike single-provider gateways, MindRouter natively accepts requests in <strong>three major API formats</strong>: OpenAI, Anthropic, and Ollama. This allows you to use whichever client library or SDK your team already knows:</p>
+<table>
+<thead>
+<tr>
+<th>API Format</th>
+<th>Endpoints</th>
+<th>Who It's For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OpenAI</strong></td>
+<td>/v1/chat/completions, /v1/completions, /v1/embeddings, /v1/rerank</td>
+<td>Teams using the OpenAI SDK, LangChain, or any OpenAI-compatible tool</td>
+</tr>
+<tr>
+<td><strong>Anthropic</strong></td>
+<td>/v1/messages</td>
+<td>Teams using the Anthropic SDK or Claude-native workflows</td>
+</tr>
+<tr>
+<td><strong>Ollama</strong></td>
+<td>/api/chat, /api/generate, /api/embeddings</td>
+<td>Teams running local Ollama clients or scripts</td>
+</tr>
+</tbody>
+</table>
+<p><strong>You don't need to rewrite your application to switch providers.</strong> If you've been calling api.openai.com, just change the base URL to your MindRouter endpoint. If your team standardized on the Anthropic SDK, send requests in Anthropic's message format, and MindRouter will understand it natively. If you're migrating from a local Ollama setup to a shared GPU cluster, your existing Ollama client code works without modification.</p>
+<p>All three formats are first-class citizens. They share the same authentication, scheduling, quota, and routing infrastructure. The only difference is the shape of the JSON on the way in and out. Under the hood, every request is translated into MindRouter's canonical intermediate representation (more on that in Step 3), so the backend GPUs never know which API format originated the request.</p>
+<p>At this stage, MindRouter assigns a unique request_id (format: <code>chatcmpl-{hex}</code>) and binds it to the structured logging context. Every log line for this request will carry this ID, making debugging straightforward across the entire pipeline.</p>
+<h2>Step 2: Authentication</h2>
+<p>Before anything else, your API key is verified. MindRouter supports two authentication methods:</p>
+<ul>
+<li><code>Authorization: Bearer mr2_...</code></li>
+<li><code>X-API-Key: mr2_...</code></li>
+</ul>
+<p>The verification process is designed for both security and speed:</p>
+<ol>
+<li>
+<p><strong>Prefix lookup:</strong> Extract the first 8 characters after <code>mr2_</code> and look up matching keys in the database via an indexed column. This avoids expensive hash operations on every request.</p>
+</li>
+<li>
+<p><strong>Hash verification:</strong> For the matched key, verify the full key using <strong>SHA-256 + Argon2</strong> hashing. This is the same class of algorithm used for password storage. Even if the database is compromised, raw API keys cannot be recovered.</p>
+</li>
+<li>
+<p><strong>Status checks:</strong> Verify the key is ACTIVE, not revoked, has not expired, and that the owning user account is active.</p>
+</li>
+</ol>
+<p>If any check fails, you get a clear 401 Unauthorized response before any compute resources are consumed.</p>
+<h2>Step 3: Input Translation (Request --&gt; Canonical)</h2>
+<p>MindRouter's secret weapon is its <strong>canonical intermediate representation</strong>. Instead of coupling the API format to any specific backend, every incoming request is first translated into an internal canonical format.</p>
+<p>This is where the "translation layer" in MindRoutercomes from.</p>
+<p><strong>What gets translated:</strong></p>
+<ul>
+<li>
+<p><strong>Messages:</strong> Each message (system, user, assistant, tool) is converted to a canonical Message object. Multimodal content, such as images, is parsed into structured content blocks.</p>
+</li>
+<li>
+<p><strong>Parameters:</strong> max_completion_tokens takes priority over max_tokens, matching OpenAI's latest convention. Temperature, top_p, top_k, and repetition_penalty are all normalized.</p>
+</li>
+<li>
+<p><strong>Response format:</strong> JSON mode and JSON schema specifications are mapped to canonical equivalents.</p>
+</li>
+<li>
+<p><strong>Thinking mode:</strong> MindRouter accepts multiple thinking or reasoning formats and normalizes them all to a single canonical field.</p>
+</li>
+<li>
+<p><strong>Tool definitions:</strong> Function calling or tool use definitions are preserved in canonical form for models that support them.</p>
+</li>
+</ul>
+<p>This canonical format is the <strong>lingua franca</strong> of the system. Every downstream component, including the scheduler, backend translators, and audit logger, speaks canonical. Adding a new backend type would only require writing a single new output translator.</p>
+<h2>Step 4: Quota Check</h2>
+<p>Before burning any GPU cycles, MindRouter checks whether you're within your token budget.</p>
+<p>Every user belongs to a <strong>group</strong> (students, faculty, researchers, etc.), and each group defines default quotas:</p>
+<ul>
+<li><strong>Token budget:</strong> How many tokens you can use per billing period</li>
+<li><strong>RPM limit:</strong> Maximum requests per minute</li>
+<li><strong>Max concurrent:</strong> How many simultaneous requests you can have in flight</li>
+</ul>
+<p>If your current period usage exceeds your group's token budget, you get a 429 Too Many Requests response. The quota counter lives in <strong>Redis</strong> for sub-millisecond checks and is synced to the database every 60 seconds for durability.</p>
+<p>The period resets automatically based on your configured budget_period_days (default: 30 days). A separate lifetime_tokens_used counter tracks your all-time usage and is never reset, even when data retention purges old request records.</p>
+<h2>Step 5: Audit Record</h2>
+<p>Before the request enters the scheduling pipeline, MindRouter writes an audit record to the database with:</p>
+<ul>
+<li>User ID, API key ID, model name, endpoint</li>
+<li>Full message history, for debugging and compliance</li>
+<li>Client IP address and user agent</li>
+<li>Whether streaming was requested</li>
+<li>A UUID for cross-referencing in logs</li>
+</ul>
+<p><strong>Critical design choice:</strong> This database write is committed immediately and independently. It does not hold a transaction lock during the potentially long inference phase. This prevents database contention under high load and ensures the audit trail exists even if the inference step crashes.</p>
+<h2>Step 6: Fair-Share Scheduling</h2>
+<p>This is where MindRouter gets interesting. Instead of a simple FIFO queue, requests are scheduled using a <strong>Weighted Deficit Round Robin (WDRR)</strong> algorithm.</p>
+<h3>Why Fair-Share?</h3>
+<p>Imagine two users: Alice is running a batch job sending 50 requests per minute, and Bob just wants to ask one question. Without fair-share scheduling, Bob's single request would sit behind Alice's 50. With WDRR, Bob gets served quickly because he has not used much recent capacity.</p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/03/22/8145/8145d5fa81652fb448a1f4eb27410fd44e0b604cee64fb212b871e7235712f0c_16c00475.png" alt="figure2a.png" style="width: 100%; height: auto;">
+</div>
+
+<h3>How It Works</h3>
+<p>Each user has a <strong>deficit counter</strong> that tracks their recent consumption. The priority formula balances multiple factors:</p>
+<ul>
+<li><strong>Deficit:</strong> Accumulates as you use tokens. Heavy recent users have high deficit, which means lower priority.</li>
+<li><strong>Burst credits:</strong> When the cluster is idle, everyone accumulates credits that allow free consumption without penalty.</li>
+<li><strong>Weight:</strong> Comes from your group's scheduler_weight. Faculty (weight=3) get 3 times the throughput share of students (weight=1) under contention.</li>
+<li><strong>Wait bonus:</strong> Anti-starvation mechanism. The longer your request waits, the higher its priority climbs. No request waits forever.</li>
+</ul>
+<h3>The Job Object</h3>
+<p>At this stage, MindRouter creates a Job with estimated prompt and completion token counts (using tiktoken), modality classification (chat, multimodal, embedding), and the computed WDRR priority score. The job enters a global priority queue, a per-user queue, and a per-model queue.</p>
+<h2>Step 7: Backend Selection (The Scoring Engine)</h2>
+<p>With the job queued, MindRouter needs to pick the best GPU backend from potentially dozens of candidates across the cluster. This is a two-phase process.</p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/03/22/c58f/c58f72cbc3f11806804a25ec60c9ab9f0bcb0aef9b92c38bfaad452e0ea5b764_ed8d5929.png" alt="figure3a.png" style="width: 100%; height: auto;">
+</div>
+
+<h3>Phase 1: Hard Constraints</h3>
+<p>Every backend is checked against non-negotiable requirements. If any requirement fails, the backend is eliminated:</p>
+<ul>
+<li><strong>Health:</strong> Backend status must be HEALTHY, meaning a recent successful health check</li>
+<li><strong>Model available:</strong> The requested model must be loaded or available on this backend</li>
+<li><strong>Modality support:</strong> Vision models for image requests, embedding models for embeddings</li>
+<li><strong>Structured output:</strong> Backend must support JSON schema if the request requires it</li>
+<li><strong>Capacity:</strong> Current load plus queue depth must be below max_concurrent</li>
+</ul>
+<h3>Phase 2: Soft Scoring</h3>
+<p>Eligible backends are scored on multiple weighted factors. The <strong>model loaded bonus</strong> is by far the largest factor, approximately 100 points. If a model is already resident in GPU memory on a backend, that backend wins almost every time. Loading a model from disk can take 30 to 60 seconds, while inference on a loaded model starts immediately.</p>
+<p>Other factors create tiebreakers. The system prefers GPUs that are less busy, have shorter queues, use faster hardware (H200 &gt; A100 &gt; RTX 8000), have lower recent latency, tracked as an exponential moving average, and have higher admin-configured priority.</p>
+<h3>Waiting for Capacity</h3>
+<p>If no backend has capacity right now, the request does not fail immediately. Instead, MindRouter enters a capacity wait loop:</p>
+<ol>
+<li>Register as a waiter for the requested model</li>
+<li>Wait up to 150 seconds for a slot to open</li>
+<li>Recompute priority periodically, since your priority improves as you wait</li>
+<li>Apply a priority gate so that only the highest-priority waiter for a model gets the next available slot</li>
+</ol>
+<p>This prevents thundering herd problems. When a slot opens, all waiters do not rush in simultaneously. Only the one that deserves it most, based on fair-share, proceeds.</p>
+<h2>Step 8: Token Counting and Context Capping</h2>
+<p>Before sending to the backend, MindRouter counts your input tokens precisely and caps the output to prevent context overflows.</p>
+<p><strong>For vLLM backends:</strong> We call the backend's <code>/tokenize</code> endpoint directly. This gives an authoritative token count that includes chat template overhead, tool definitions, and special tokens.</p>
+<p><strong>For Ollama backends:</strong> We use tiktoken as a best-effort estimate, adding overhead per message for role markers and separators.</p>
+<p><strong>Context capping</strong> is critical for stability:</p>
+<div class="codehilite"><pre><span></span><code>remaining = context_length - input_tokens - 1024 (safety buffer)
+max_tokens = min(requested_max, remaining, 65536)
+</code></pre></div>
+
+<p>This prevents users from requesting more output tokens than the model's context window can hold. On some models, exceeding this limit would cause an out-of-memory crash on the GPU, affecting all users on that backend.</p>
+<h2>Step 9: Output Translation (Canonical to Backend)</h2>
+<p>Now the canonical request is translated into the backend's native format. Each backend speaks its own dialect, and MindRouter handles the differences transparently.</p>
+<p><strong>For vLLM:</strong></p>
+<ul>
+<li>Most parameters map directly, including temperature, top_p, and max_tokens</li>
+<li>Thinking mode is mapped appropriately depending on format</li>
+<li>Tool definitions pass through as-is</li>
+<li>Structured output formats may need promotion</li>
+</ul>
+<p><strong>For Ollama:</strong></p>
+<ul>
+<li>Sampling parameters go into a nested options dictionary</li>
+<li>max_tokens becomes num_predict</li>
+<li>num_ctx is injected from the model's configured context length</li>
+<li><code>format: "json"</code> is used for JSON mode</li>
+<li><code>think: true/false</code> is set at the top level</li>
+</ul>
+<p>This allows a single OpenAI-format request to work across multiple backends without modification.</p>
+<h2>Step 10: Backend Request with Retry</h2>
+<p>The translated request is sent to the selected GPU backend with automatic retry and failover.</p>
+<h3>Retry Strategy</h3>
+<ul>
+<li>Up to 3 attempts, configurable</li>
+<li>Each attempt targets a different backend</li>
+<li>Timeout per attempt is 180 seconds</li>
+</ul>
+<h3>What's Retryable?</h3>
+<table>
+<thead>
+<tr>
+<th>Error Type</th>
+<th>Retryable?</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timeout</td>
+<td>Yes</td>
+<td>Try different backend</td>
+</tr>
+<tr>
+<td>Connection error</td>
+<td>Yes</td>
+<td>Try different backend</td>
+</tr>
+<tr>
+<td>5xx Server Error</td>
+<td>Yes</td>
+<td>Try different backend</td>
+</tr>
+<tr>
+<td>4xx Client Error</td>
+<td>No</td>
+<td>Return error immediately</td>
+</tr>
+</tbody>
+</table>
+<h3>Circuit Breaker</h3>
+<p>Backend failures feed into a circuit breaker. After a threshold number of consecutive failures, the backend enters a cooldown period. It will not receive new requests during that time. A single successful request resets the failure counter.</p>
+<h2>Step 11: Response Translation</h2>
+<p>The backend's response is translated back into the <strong>canonical internal format</strong>, then converted to match the API the client originally called: OpenAI format for /v1/ endpoints, Ollama format for /api/ endpoints, and Anthropic format for /anthropic/v1 endpoints. This happens regardless of which backend engine actually generated it.</p>
+<h2>Step 12: Token Tracking and Request Completion</h2>
+<p>After the response is sent to the client, MindRouter records the results in a carefully ordered sequence:</p>
+<ol>
+<li>Release backend capacity immediately</li>
+<li>Mark model as loaded</li>
+<li>Update audit record</li>
+<li>Update quota</li>
+<li>Update Redis</li>
+</ol>
+<p>All post-inference database operations run inside <code>asyncio.shield()</code> to prevent mid-transaction cancellation.</p>
+<h2>Streaming: The Parallel Path</h2>
+<p>For streaming responses, the flow is similar but includes:</p>
+<ul>
+<li>Server-Sent Events for real-time token streaming</li>
+<li>Progressive token estimation</li>
+<li>Graceful handling of client disconnects</li>
+<li>Final completion signal via <code>data: [DONE]</code></li>
+</ul>
+<h2>When Things Go Wrong</h2>
+<p>MindRouter handles failures at every level with appropriate responses:</p>
+<table>
+<thead>
+<tr>
+<th>Failure Point</th>
+<th>HTTP Status</th>
+<th>What Happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Invalid API key</td>
+<td>401</td>
+<td>Rejected immediately</td>
+</tr>
+<tr>
+<td>Quota exceeded</td>
+<td>429</td>
+<td>Rejected before scheduling</td>
+</tr>
+<tr>
+<td>Model not found</td>
+<td>404</td>
+<td>Checked before queuing</td>
+</tr>
+<tr>
+<td>No capacity (temporary)</td>
+<td>--</td>
+<td>Wait with priority gating</td>
+</tr>
+<tr>
+<td>No capacity (permanent)</td>
+<td>503</td>
+<td>Service Unavailable</td>
+</tr>
+<tr>
+<td>Backend errors</td>
+<td>--</td>
+<td>Retry up to 3 times</td>
+</tr>
+<tr>
+<td>All backends failed</td>
+<td>502</td>
+<td>Return last error</td>
+</tr>
+<tr>
+<td>Client disconnect</td>
+<td>--</td>
+<td>Graceful cleanup</td>
+</tr>
+</tbody>
+</table>
+<h2>Performance Design Highlights</h2>
+<ul>
+<li>Sub-millisecond quota checks using Redis</li>
+<li>Early model validation</li>
+<li>Immediate audit commit</li>
+<li>In-memory queue depth tracking</li>
+<li>Priority gating</li>
+<li>Parallel metadata loading</li>
+</ul>
+<h2>Conclusion</h2>
+<p>What looks like a simple API call, send a prompt and get a response, involves authentication, translation, fair-share scheduling, backend scoring, capacity management, retry logic, response translation, and token tracking. Each step is designed for correctness, fairness, and performance.</p>
+<p>The next time your request comes back in 200 milliseconds, you'll know it passed through all 12 steps in that time. And the next time it takes a few seconds, you'll know it was waiting its fair turn in the scheduler while the cluster balanced load across dozens of GPUs.</p>
+<p><strong><em>MindRouter handles the complexity so your code doesn't have to.</em></strong></p>
+                    </article>
+                    <hr class="my-5">
+                    <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">
+                        <a class="flex-fill text-start text-decoration-none" href="/blog/writing-robust-resilient-python-clients-for-mindrouter/"><span class="d-block text-muted" style="font-size:0.78rem;">&larr; Newer post</span><span>Writing Robust, Resilient Python Clients for MindRouter</span></a>
+                        <a class="flex-fill text-end text-decoration-none" href="/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/"><span class="d-block text-muted" style="font-size:0.78rem;">&rarr; Older post</span><span>Agentic AI on Campus: Powering Claude Code with MindRouter</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="site-footer py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="/blog/feed.xml" class="text-muted"><i class="bi bi-rss"></i> RSS</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "dateModified": "2026-07-27T12:16:27+00:00",
+    "datePublished": "2026-03-22T18:42:47+00:00",
+    "description": "When you send a request to MindRouter, whether it's a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated s\u2026",
+    "headline": "What Happens to Your Request Inside MindRouter's Scheduling and Routing",
+    "image": [
+        "https://mindrouter.ai/blog/images/2026/03/22/2327/23271c0f201bc24b560b3dab0502e824eb11e6dbf081ff026d519e033402fc55_94734e1c.png",
+        "https://mindrouter.ai/blog/images/2026/03/22/8145/8145d5fa81652fb448a1f4eb27410fd44e0b604cee64fb212b871e7235712f0c_16c00475.png",
+        "https://mindrouter.ai/blog/images/2026/03/22/c58f/c58f72cbc3f11806804a25ec60c9ab9f0bcb0aef9b92c38bfaad452e0ea5b764_ed8d5929.png"
+    ],
+    "mainEntityOfPage": "https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/",
+    "publisher": {
+        "@type": "Organization",
+        "name": "MindRouter"
+    },
+    "url": "https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/"
+}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

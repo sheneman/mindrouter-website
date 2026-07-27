@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>MindRouter Blog</title>
+    <link>https://mindrouter.ai/blog/</link>
+    <atom:link href="https://mindrouter.ai/blog/feed.xml" rel="self" type="application/rss+xml"/>
+    <description>Updates, tutorials, and best practices from the MindRouter team.</description>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 22 Jul 2026 13:09:08 +0000</lastBuildDate>
+    <item>
+      <title>The Almost Free Lunch: How We Just Doubled MindRouter&#x27;s AI Speed with Speculative Decoding</title>
+      <link>https://mindrouter.ai/blog/the-almost-free-lunch-how-speculative-decoding-doubles-our-ai-throughput/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/the-almost-free-lunch-how-speculative-decoding-doubles-our-ai-throughput/</guid>
+      <pubDate>Wed, 22 Jul 2026 13:09:08 +0000</pubDate>
+      <description>Your GPU spends most of its life waiting. Speculative decoding gives it something useful to do.</description>
+    </item>
+    <item>
+      <title>Conversations That Remember: MindRouter Now Supports OpenAI Responses and Conversations APIs</title>
+      <link>https://mindrouter.ai/blog/conversations-that-remember-mindrouters-new-responses-and-conversations-apis/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/conversations-that-remember-mindrouters-new-responses-and-conversations-apis/</guid>
+      <pubDate>Tue, 14 Jul 2026 16:37:30 +0000</pubDate>
+      <description>MindRouter now natively supports OpenAI&#x27;s Responses and Conversations APIs, giving your programs server-side memory, live web search, automatic context managem…</description>
+    </item>
+    <item>
+      <title>From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter</title>
+      <link>https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/</guid>
+      <pubDate>Mon, 18 May 2026 16:18:30 +0000</pubDate>
+      <description>Secure, on-premises speech-to-text and text-to-speech via MindRouter&#x27;s Voice API, powered by OpenAI Whisper and Kokoro on dedicated GPUs, with a focus on resea…</description>
+    </item>
+    <item>
+      <title>Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web</title>
+      <link>https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/</guid>
+      <pubDate>Fri, 01 May 2026 16:57:48 +0000</pubDate>
+      <description>How to wire MindRouter&#x27;s web search into chats, scripts, apps, and agents using skills and MCP.</description>
+    </item>
+    <item>
+      <title>Writing Robust, Resilient Python Clients for MindRouter</title>
+      <link>https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/writing-robust-resilient-python-clients-for-mindrouter/</guid>
+      <pubDate>Sat, 18 Apr 2026 15:00:38 +0000</pubDate>
+      <description>A comprehensive guide to building production-grade client code against MindRouter&#x27;s OpenAI-compatible API</description>
+    </item>
+    <item>
+      <title>What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing</title>
+      <link>https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/</guid>
+      <pubDate>Sun, 22 Mar 2026 18:42:47 +0000</pubDate>
+      <description>When you send a request to MindRouter, whether it&#x27;s a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated s…</description>
+    </item>
+    <item>
+      <title>Agentic AI on Campus: Powering Claude Code with MindRouter</title>
+      <link>https://mindrouter.ai/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/</link>
+      <guid isPermaLink="true">https://mindrouter.ai/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/</guid>
+      <pubDate>Fri, 13 Mar 2026 13:45:08 +0000</pubDate>
+      <description>How the University of Idaho runs autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.</description>
+    </item>
+  </channel>
+</rss>

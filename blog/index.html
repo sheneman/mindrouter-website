@@ -9,7 +9,9 @@
     <meta property="og:description" content="Updates, tutorials, and best practices from the MindRouter team.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mindrouter.ai/blog/">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="canonical" href="https://mindrouter.ai/blog/">
+    <link rel="alternate" type="application/rss+xml" title="MindRouter Blog" href="/blog/feed.xml">
     <script>
     (function() {
         var t = localStorage.getItem('mr-theme') ||
@@ -18,74 +20,122 @@
     })();
     </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-<link href="/css/style.css" rel="stylesheet">
-<link href="/css/blog.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css">
-    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/blog.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css" rel="stylesheet">
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
-    <div class="container">
-        <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
-                <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
-                <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
-            </ul>
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
-                </li>
-            </ul>
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
     <main id="main-content">
         <div class="container py-5">
             <div class="row">
                 <div class="col-lg-8 mx-auto">
-                    <h1 class="mb-1">Blog</h1>
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+                        <h1 class="mb-0">Blog</h1>
+                        <a class="text-decoration-none text-muted" style="font-size:0.85rem;" href="/blog/feed.xml"><i class="bi bi-rss"></i> RSS</a>
+                    </div>
                     <p class="text-muted mb-4">Updates, tutorials, and best practices from the MindRouter team.</p>
-                    <p class="text-muted">No posts yet. Check back soon.</p>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/the-almost-free-lunch-how-speculative-decoding-doubles-our-ai-throughput/">The Almost Free Lunch: How We Just Doubled MindRouter&#x27;s AI Speed with Speculative Decoding</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-07-22T13:09:08+00:00">July 22, 2026</time></p>
+                            <p class="mb-2">Your GPU spends most of its life waiting. Speculative decoding gives it something useful to do.</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/the-almost-free-lunch-how-speculative-decoding-doubles-our-ai-throughput/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/conversations-that-remember-mindrouters-new-responses-and-conversations-apis/">Conversations That Remember: MindRouter Now Supports OpenAI Responses and Conversations APIs</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-07-14T16:37:30+00:00">July 14, 2026</time></p>
+                            <p class="mb-2">MindRouter now natively supports OpenAI&#x27;s Responses and Conversations APIs, giving your programs server-side memory, live web search, automatic context managem…</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/conversations-that-remember-mindrouters-new-responses-and-conversations-apis/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/">From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-05-18T16:18:30+00:00">May 18, 2026</time></p>
+                            <p class="mb-2">Secure, on-premises speech-to-text and text-to-speech via MindRouter&#x27;s Voice API, powered by OpenAI Whisper and Kokoro on dedicated GPUs, with a focus on resea…</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/">Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-05-01T16:57:48+00:00">May 1, 2026</time></p>
+                            <p class="mb-2">How to wire MindRouter&#x27;s web search into chats, scripts, apps, and agents using skills and MCP.</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/writing-robust-resilient-python-clients-for-mindrouter/">Writing Robust, Resilient Python Clients for MindRouter</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-04-18T15:00:38+00:00">April 18, 2026</time></p>
+                            <p class="mb-2">A comprehensive guide to building production-grade client code against MindRouter&#x27;s OpenAI-compatible API</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/writing-robust-resilient-python-clients-for-mindrouter/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/">What Happens to Your Request Inside MindRouter&#x27;s Scheduling and Routing</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-03-22T18:42:47+00:00">March 22, 2026</time></p>
+                            <p class="mb-2">When you send a request to MindRouter, whether it&#x27;s a simple chat completion, an image analysis, or an embedding query, it kicks off a carefully orchestrated s…</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/what-happens-to-your-request-inside-mindrouters-scheduling-and-routing/">Read more &rarr;</a>
+                        </li>
+                        <li class="mb-4 pb-4 border-bottom">
+                            <h2 class="h4 mb-1"><a class="text-decoration-none" href="/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/">Agentic AI on Campus: Powering Claude Code with MindRouter</a></h2>
+                            <p class="text-muted mb-2" style="font-size:0.85rem;"><time datetime="2026-03-13T13:45:08+00:00">March 13, 2026</time></p>
+                            <p class="mb-2">How the University of Idaho runs autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.</p>
+                            <a class="text-decoration-none" style="font-size:0.9rem;" href="/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/">Read more &rarr;</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
     </main>
     <footer class="site-footer py-4 mt-5">
-    <div class="container text-center">
-        <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
-            <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
-        </p>
-        <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
-        <p class="text-muted mb-2" style="font-size:0.82rem;">
-            Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
-            at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
-            &middot;
-            <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
-        </p>
-        <p class="text-muted mb-2" style="font-size:0.82rem;">
-            <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
-            &nbsp;&middot;&nbsp; Apache 2.0 License
-        </p>
-        <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
-            Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
-            PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
-            <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
-        </p>
-    </div>
-</footer>
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="/blog/feed.xml" class="text-muted"><i class="bi bi-rss"></i> RSS</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+    <script>
     (function() {
         var btn = document.getElementById('themeToggleBtn');
         if (!btn) return;
@@ -102,6 +152,6 @@
             updateIcon();
         });
     })();
-</script>
+    </script>
 </body>
 </html>

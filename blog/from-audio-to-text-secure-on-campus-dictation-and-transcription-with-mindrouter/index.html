@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter — MindRouter Blog</title>
+    <meta name="description" content="Secure, on-premises speech-to-text and text-to-speech via MindRouter&#x27;s Voice API, powered by OpenAI Whisper and Kokoro on dedicated GPUs, with a focus on resea…">
+    <meta property="og:title" content="From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter — MindRouter Blog">
+    <meta property="og:description" content="Secure, on-premises speech-to-text and text-to-speech via MindRouter&#x27;s Voice API, powered by OpenAI Whisper and Kokoro on dedicated GPUs, with a focus on resea…">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/">
+    <link rel="alternate" type="application/rss+xml" title="MindRouter Blog" href="/blog/feed.xml">
+    <meta property="article:published_time" content="2026-05-18T16:18:30+00:00">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/blog.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <p class="mb-3"><a href="/blog/" class="text-decoration-none text-muted" style="font-size:0.85rem;">&larr; All posts</a></p>
+                    <h1 class="mb-2">From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter</h1>
+                    <p class="text-muted mb-4" style="font-size:0.9rem;"><time datetime="2026-05-18T16:18:30+00:00">May 18, 2026</time></p>
+                    <article class="blog-content">
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/18/1414/1414cf86ae8a7d6c150fb84c5888142409f2b282665ee1d198a08731b333d1c9_da719756.png" alt="d03c6daa-b082-4031-b441-a63fe0db48b1.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<H3>MindRouter Transcription and Voice</H3>
+
+<p>If you have ever recorded an interview, a lecture, a focus group, or a field observation and then spent hours manually transcribing it, this post is for you. MindRouter now provides a full-featured speech-to-text (STT) dictation service alongside text-to-speech (TTS) capabilities, all running on dedicated GPUs at the University of Idaho. No cloud providers. No third-party data sharing. No ambiguity about where your audio goes.</p>
+<p>This post focuses primarily on the STT side of MindRouter's Voice API, because that is where the real impact lies for researchers, students, and staff. We will walk through what the service can do, which audio and video formats it accepts, how the different output formats work, and why keeping transcription on-premises matters, especially when your recordings contain human subjects data.</p>
+<p>We will also cover the TTS capabilities, the specific models powering everything, and point you to a <a href="https://github.com/sheneman/mindrouter_voice">public repository of working code examples</a> that you can use right away.</p>
+<hr />
+<h2>What Is the MindRouter Voice API?</h2>
+<p>MindRouter is an open-source LLM inference gateway that routes requests across a heterogeneous AI GPU cluster. Its Voice API adds two OpenAI-compatible endpoints:</p>
+<ul>
+<li><strong>POST /v1/audio/transcriptions</strong> (Speech-to-Text): Upload an audio or video file and get back a text transcript</li>
+<li><strong>POST /v1/audio/speech</strong> (Text-to-Speech): Send text and get back synthesized audio</li>
+</ul>
+<p>Both endpoints require a MindRouter API key for authentication and deduct a small, configurable token cost from your quota per request. The API follows the same conventions as the OpenAI Audio API, so if you have existing code that talks to OpenAI's transcription or speech endpoints, you can point it at MindRouter by changing the base URL.</p>
+<hr />
+<h2>The Models: What Is Running Under the Hood</h2>
+<h3>STT: OpenAI whisper-large-v3-turbo</h3>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/18/388b/388bc5b417d9fd0057f765fbf3a81d30bc98be4ee0b72c9a87aad283810310e4_32753576.png" alt="c0387396-9dd5-4b6b-8e2c-f817e0976306.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>The transcription engine is <a href="https://huggingface.co/openai/whisper-large-v3-turbo"><strong>whisper-large-v3-turbo</strong></a>, an optimized variant of OpenAI's Whisper large-v3 model. Whisper is an encoder-decoder Transformer trained on over 680,000 hours of multilingual audio data. It handles transcription, language identification, and translation across 99 languages.</p>
+<p>The "turbo" variant is a pruned version of the full large-v3 model. The encoder is identical, but the decoder has been reduced from 32 layers down to 4, cutting total parameters from 1.55 billion to 809 million. In practice, this means 2 to 8 times faster inference with virtually no loss in transcription accuracy. On standard English benchmarks, whisper-large-v3-turbo achieves around 2.1% word error rate (WER) on clean speech and 4.2% on noisy speech, which is well within the range of professional human transcription services.</p>
+<p>MindRouter runs Whisper through <strong>faster-whisper</strong>, a high-performance reimplementation that uses the <a href="https://github.com/opennmt/ctranslate2">CTranslate2</a> inference engine. This delivers up to 4x additional speedup over the reference PyTorch implementation, with INT8 quantization bringing GPU memory usage down to roughly 2 GB. The service is exposed through <a href="https://github.com/speaches-ai/speaches"><strong>Speaches</strong></a>, an open-source server (MIT license) that wraps faster-whisper behind a fully OpenAI-compatible REST API.</p>
+<p>The result: you get the accuracy of a 1.5-billion-parameter Whisper model at speeds fast enough for interactive use, running on university hardware.</p>
+<p><br></p>
+<hr />
+<h3>TTS: Kokoro-82M</h3>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/18/a881/a88114189da22e88eb4ec7761337d1860692e127facca1fa86d426ff85ad2557_7298a0c0.png" alt="7647e51a-b592-4cb5-9c1c-0c30618e1591.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>On the text-to-speech side, MindRouter uses <a href="https://huggingface.co/hexgrad/Kokoro-82M"><strong>Kokoro-82M</strong></a>, an open-weight TTS model. Despite having only 82 million parameters (a fraction of the size of models like XTTS or MetaVoice), Kokoro reached the number one spot on the Hugging Face TTS Arena leaderboard. It achieves a mean opinion score (MOS) of roughly 4.5 out of 5, which puts it in the range of near-human speech quality.</p>
+<p>Kokoro is built on the <a href="https://arxiv.org/pdf/2306.07691">StyleTTS 2 architecture</a> with an <a href="https://arxiv.org/pdf/2203.02395">ISTFTNet vocoder</a>. It supports 8 languages (American English, British English, Chinese, Japanese, Spanish, French, Hindi, Italian, and Brazilian Portuguese) and ships with 54 built-in voices. It is licensed under Apache 2.0.</p>
+<p>Both models run on dedicated NVIDIA A5000 GPUs within the University of Idaho's on-premises MindRouter Artificial Intelligence GPU cluster. </p>
+<p><strong>Audio data is processed locally and never transmitted to any external service.</strong></p>
+<hr />
+<h2>Speech-to-Text (STT): A General-Purpose Dictation Service</h2>
+<p>The STT endpoint is not just a transcription tool for one narrow use case. It is a general-purpose dictation and media-to-text service. You can feed it:</p>
+<ul>
+<li>Voice memos recorded on your phone</li>
+<li>Interview recordings from a digital recorder</li>
+<li>Lecture captures from classroom audio systems</li>
+<li>Screen recordings and video files (the audio track is extracted automatically)</li>
+<li>Browser-recorded audio from web-based survey platforms</li>
+<li>Podcasts, webinars, and conference presentations</li>
+<li>Field recordings from ethnographic research</li>
+</ul>
+<p><strong>If it has an audio track, MindRouter can transcribe it.</strong></p>
+<hr />
+<h3>Supported Input Formats</h3>
+<p>The STT endpoint accepts any audio or video format that FFmpeg can decode. In practice, this covers virtually every media format you will encounter:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Extensions</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MP3</td>
+<td><code>.mp3</code></td>
+<td>The most common format for compressed audio</td>
+</tr>
+<tr>
+<td>WAV</td>
+<td><code>.wav</code></td>
+<td>Uncompressed PCM audio, large file sizes</td>
+</tr>
+<tr>
+<td>WebM</td>
+<td><code>.webm</code></td>
+<td>Default format for browser-based recordings</td>
+</tr>
+<tr>
+<td>M4A / AAC</td>
+<td><code>.m4a</code>, <code>.aac</code></td>
+<td>Standard on Apple devices and iTunes</td>
+</tr>
+<tr>
+<td>FLAC</td>
+<td><code>.flac</code></td>
+<td>Lossless compression, popular with archivists</td>
+</tr>
+<tr>
+<td>OGG / Opus</td>
+<td><code>.ogg</code>, <code>.opus</code></td>
+<td>Open-source formats, efficient compression</td>
+</tr>
+<tr>
+<td>MP4 video</td>
+<td><code>.mp4</code></td>
+<td>Audio track extracted automatically</td>
+</tr>
+<tr>
+<td>MPEG</td>
+<td><code>.mpeg</code>, <code>.mpga</code></td>
+<td>Legacy formats still in circulation</td>
+</tr>
+</tbody>
+</table>
+<p>This means you do not need to convert your files before uploading. Interview recorded on an iPhone? Upload the <code>.m4a</code> directly. Screen recording saved as <code>.mp4</code>? Upload it as-is. Zoom meeting exported as <code>.mp3</code>? Same thing. The service handles format detection and audio extraction internally.</p>
+<hr />
+<h3>Five Output Formats for Different Workflows</h3>
+<p>One of the most useful features of the STT endpoint is its support for five distinct output formats, each tailored to a different workflow. You choose the format via the <code>response_format</code> parameter.</p>
+<h4>1. JSON (default)</h4>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=json&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Response:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;So when we started the project in January, the first thing we noticed was...&quot;</span><span class="p">}</span>
+</code></pre></div>
+
+<p><br></p>
+<p><strong>When to use it:</strong> Programmatic pipelines, data processing scripts, any context where you need to parse the result as structured data. This is the default if you do not specify a format.</p>
+<h4>2. Plain Text</h4>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=text&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Response:</p>
+<div class="codehilite"><pre><span></span><code>So when we started the project in January, the first thing we noticed was...
+</code></pre></div>
+
+<p><br></p>
+<p><strong>When to use it:</strong> Note-taking, quick dictation, generating documents from spoken input. The output is plain text with no markup, metadata, or timestamps. Pipe it directly into a file and you have a usable document.</p>
+<p><br></p>
+<h4>3. Verbose JSON</h4>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=verbose_json&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Response (abbreviated):</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;task&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;transcribe&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;english&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">342.5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;segments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">4.8</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;So when we started the project in January,&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50364</span><span class="p">,</span><span class="w"> </span><span class="mi">407</span><span class="p">,</span><span class="w"> </span><span class="mi">562</span><span class="p">,</span><span class="w"> </span><span class="mi">321</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;avg_logprob&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-0.21</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;compression_ratio&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.45</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;no_speech_prob&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.02</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">4.8</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot; the first thing we noticed was...&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50604</span><span class="p">,</span><span class="w"> </span><span class="mi">264</span><span class="p">,</span><span class="w"> </span><span class="mi">700</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;avg_logprob&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-0.18</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;compression_ratio&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.38</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;no_speech_prob&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><br></p>
+<p><strong>When to use it:</strong> Research analysis where you need time-aligned annotation. Each segment includes start and end timestamps (in seconds), confidence metrics (<code>avg_logprob</code>, <code>no_speech_prob</code>), and token-level detail. This is invaluable for qualitative coding, conversational analysis, or any work where you need to map transcript passages back to specific moments in the recording.</p>
+<p><br></p>
+<h4>4. SRT (SubRip Subtitles)</h4>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@lecture.mp4&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=srt&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Response:</p>
+<div class="codehilite"><pre><span></span><code>1
+00:00:00,000 --&gt; 00:00:04,800
+So when we started the project in January,
+
+2
+00:00:04,800 --&gt; 00:00:08,200
+the first thing we noticed was...
+</code></pre></div>
+
+<p><br></p>
+<p><strong>When to use it:</strong> Adding subtitles to video. SRT is the most widely supported subtitle format. Import it into video editors (Premiere Pro, DaVinci Resolve, iMovie), media players (VLC), or video hosting platforms (YouTube, Vimeo) to add captions to lectures, presentations, or research video.</p>
+<p><br></p>
+<h4>5. VTT (WebVTT)</h4>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@lecture.mp4&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=vtt&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Response:</p>
+<div class="codehilite"><pre><span></span><code>WEBVTT
+
+00:00:00.000 --&gt; 00:00:04.800
+So when we started the project in January,
+
+00:00:04.800 --&gt; 00:00:08.200
+the first thing we noticed was...
+</code></pre></div>
+
+<p><br></p>
+<p><strong>When to use it:</strong> Web-based video players. VTT is the native subtitle format for HTML5 <code>&lt;track&gt;</code> elements. If you host lecture videos on a website or LMS and want to provide closed captions, this is the format you need.</p>
+<p><br></p>
+<h3>Trying It Yourself</h3>
+<p>All five output formats are demonstrated in the <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/stt_output_formats.py">stt_output_formats.py</a> example in the companion code repository. Run it against any audio file and it will generate all five outputs side by side for comparison.</p>
+<hr />
+<h2>Use Cases: Why Researchers Care About Local Transcription</h2>
+<h3>Social Science Research</h3>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/18/a0cf/a0cfa7d9c5e77707263abce7ca62e1b0b703ee3fdd92b8b5b5aee5557c6715c6_2258d48b.png" alt="3fad8cc3-0321-4a0a-aaed-c8cecd9b0920.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Qualitative social science research generates enormous volumes of audio. Semi-structured interviews, focus groups, participant observations, think-aloud protocols: these are the raw material of grounded theory, thematic analysis, and discourse analysis. Transcription is the bottleneck.</p>
+<p>A single one-hour interview can take 4 to 6 hours to transcribe manually. A study with 30 participants easily represents 120 to 180 hours of transcription labor. MindRouter's STT endpoint can process a one-hour recording in minutes, producing a first-pass transcript that a researcher can then review and correct. </p>
+<p><em>This does not replace careful human review for high-stakes analysis, but it dramatically reduces the time from recording to usable text.</em></p>
+<p>The verbose JSON output format is particularly valuable here. The segment-level timestamps let you link specific passages in the transcript back to exact moments in the recording, which is essential for conversational analysis and for verifying transcript accuracy during coding.</p>
+<p><br></p>
+<h3>Note-Taking and Dictation</h3>
+<p>Not every use case involves formal research. Faculty, staff, and students can use the STT endpoint as a personal dictation service:</p>
+<ul>
+<li>Dictate meeting notes by recording on your phone and uploading the file</li>
+<li>Convert voice memos to text for later reference</li>
+<li>Transcribe brainstorming sessions captured on a portable recorder</li>
+<li>Create first drafts of documents by speaking instead of typing</li>
+</ul>
+<p>The plain text output format is ideal for these workflows. Upload, transcribe, paste into your document.</p>
+<p><br></p>
+<h3>Video and Media Analysis</h3>
+<p>Researchers studying user behavior, media consumption, or digital interaction often need to analyze video recordings:</p>
+<ul>
+<li>Usability studies where participants narrate their screen interactions</li>
+<li>Classroom observation videos for education research</li>
+<li>Recorded presentations or panel discussions for content analysis</li>
+<li>Social media video content for communication studies</li>
+</ul>
+<p>Upload the video file directly (MP4, WebM, or other formats) and the audio track is extracted and transcribed automatically. Use the SRT or VTT output to generate time-coded transcripts that align with the video timeline, making it straightforward to cross-reference what was said with what was happening on screen.</p>
+<h3>Accessibility</h3>
+<p>Generating transcripts and captions for audio and video content is also an accessibility requirement under Section 508 and WCAG 2.1 guidelines. The SRT and VTT output formats produce subtitle files that can be attached to video content with no additional processing, helping departments and programs meet their accessibility obligations.</p>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>IRB Compliance and Human Subjects Data</h2>
+<p>Here is where things get serious. If your audio recordings contain human subjects data, where and how you transcribe them is not just a convenience question. It is a compliance question.</p>
+<h3>The Problem with Cloud Transcription Services</h3>
+<p>When you upload audio to a commercial transcription service (Google Speech-to-Text, Amazon Transcribe, Microsoft Azure Speech, OpenAI's Whisper API, Otter.ai, or similar), your data leaves your institution's control. This creates several specific risks that IRBs and compliance offices care about:</p>
+<p><strong>Loss of data control.</strong> The cloud provider becomes a data processor. Depending on their terms of service, they may retain, cache, or use your recordings for model training or service improvement. Even if their current terms prohibit this, terms of service can change.</p>
+<p><strong>Cross-border data transfer.</strong> Cloud providers may process your data in data centers located outside the United States or in jurisdictions with different privacy protections. For research governed by specific data sovereignty requirements, this can be disqualifying.</p>
+<p><strong>Biometric identification risk.</strong> Voice recordings may constitute identifiable biometric information or personally identifiable information, depending on jurisdiction, institutional policy, and research context. A voice recording is inherently identifiable, even if the content itself has been de-identified. Sending identifiable biometric data to a third party creates exposure that most IRB protocols do not anticipate.</p>
+<p><strong>Terms of service conflicts.</strong> The consent language in your IRB-approved protocol likely does not contemplate disclosure to a specific commercial AI service. Using an undisclosed third-party transcription provider may require an IRB amendment or additional disclosure, depending on institutional policy and the approved protocol.</p>
+<h3>What IRBs Typically Require</h3>
+<p>Based on published guidance from institutions including Georgia State University, Penn State, Virginia Tech, Washington State University, and Singapore Management University, IRB protocols involving audio transcription typically require:</p>
+<ol>
+<li>
+<p><strong>Disclosure in the protocol.</strong> If you plan to use any transcription tool (automated or human), you must describe it in your IRB application, including how data will be transmitted, processed, and stored.</p>
+</li>
+<li>
+<p><strong>Informed consent.</strong> Participants must be told that their recordings will be processed by the named service or tool. Some IRBs may require explicit disclosure if identifiable recordings are processed by external vendors or cloud AI services.</p>
+</li>
+<li>
+<p><strong>Data use agreements.</strong> If a third-party processor handles identifiable data, a Data Use Agreement (DUA) or Business Associate Agreement (BAA) must be in place. For HIPAA-regulated research, a BAA is legally mandatory.</p>
+</li>
+<li>
+<p><strong>Security controls.</strong> Encryption in transit (TLS/HTTPS), encryption at rest, access controls limiting data to authorized personnel, and audit trails.</p>
+</li>
+<li>
+<p><strong>Data minimization.</strong> Transcribe recordings promptly, strip identifying information from transcripts, and delete the original audio within the timeframe specified in your protocol.</p>
+</li>
+</ol>
+<h3>Relevant Federal Regulations</h3>
+<p>Several federal regulations intersect with transcription of research data:</p>
+<ul>
+<li><strong>The Common Rule (45 CFR 46)</strong> requires adequate provisions to protect participant privacy and maintain data confidentiality for all federally funded human subjects research.</li>
+<li><strong>HIPAA</strong> applies when research involves Protected Health Information. Any transcription service handling PHI must execute a BAA and comply with the Security Rule.</li>
+<li><strong>FERPA</strong> applies to research involving student education records at institutions receiving federal funding. Student data cannot be disclosed to third parties without consent or a qualifying exception.</li>
+</ul>
+<h3>How On-Premises Transcription Helps</h3>
+<p>MindRouter's STT service addresses these concerns structurally, not just through policy:</p>
+<ul>
+<li>
+<p><strong>Audio never leaves university-controlled hardware.</strong> The Whisper model runs on NVIDIA GPUs in the University of Idaho's on-premises cluster. Your recording goes from your machine to the campus network to the GPU and back. It does not traverse any third-party infrastructure.</p>
+</li>
+<li>
+<p><strong>No third-party data processor.</strong> An on-premises deployment may eliminate or substantially reduce the need for external vendor agreements such as DUAs or BAAs because data remains within institutionally managed infrastructure.</p>
+</li>
+<li>
+<p><strong>No training data leakage.</strong> Commercial providers may use customer data to improve their models. MindRouter is configured so that uploaded recordings are never reused for model training.</p>
+</li>
+<li>
+<p><strong>Simplified IRB language.</strong> Instead of describing a complex chain of third-party data processors, your protocol can state that transcription is performed using locally hosted, open-source software on university-managed infrastructure.</p>
+</li>
+</ul>
+<p>Using an on-premises transcription system does not eliminate IRB or regulatory obligations. Researchers are still responsible for obtaining appropriate approvals, accurately describing transcription workflows in protocols and consent documents, protecting recordings and transcripts, and complying with institutional policies governing sensitive data. However, keeping transcription on institutionally managed infrastructure can substantially simplify privacy, security, and vendor-risk considerations compared to external cloud AI services.  </p>
+<p><a href="https://library.smu.edu.sg/topics-insights/campus-whisper-ai-safe-and-irb-compliant-transcription-research-projects"><strong>Singapore Management University has deployed</strong></a> exactly this model, running Whisper on campus hardware as what they describe as "a secure, IRB-compliant solution for transcribing sensitive research audio while maintaining complete control over your data." <a href="https://sscs.uchicago.edu/transcription"><strong>The University of Chicago's Social Sciences Computing Services</strong></a> offers a similarly institution-managed research transcription service with IRB and security controls, though their implementation is hosted on AWS rather than entirely on-premises.</p>
+<p><strong>Researchers should always consult their institution’s IRB, privacy office, or compliance office before using any transcription workflow involving sensitive or regulated data.</strong></p>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>Text-to-Speech (TTS): The Other Half</h2>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/18/5ac0/5ac0b4356575fc478adaf2b53e789f518977f1c70af9b7083b917a772d22ee84_a38e3119.png" alt="50de3657-063a-4b4f-989c-87710105bb92.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>While the STT capabilities are the headline feature for research workflows, the TTS endpoint is useful in its own right.</p>
+<h3>What It Does</h3>
+<p>Send text in, get audio out. The Kokoro model synthesizes natural-sounding speech from any text input, with control over voice selection, playback speed, and output format.</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+<span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;https://mindrouter.uidaho.edu/v1/audio/speech&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer mr2_your-api-key&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;kokoro&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="s2">&quot;Welcome to MindRouter. This is synthesized speech.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;af_heart&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="s2">&quot;mp3&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;output.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Voices and Formats</h3>
+<p>Kokoro ships with 54 voices spanning multiple languages and styles. The MindRouter administrator configures which voices are available. You can query the available voices programmatically:</p>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>https://mindrouter.uidaho.edu/api/tts-voices<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Output audio is available in four formats: <strong>MP3</strong> (compressed, small files), <strong>WAV</strong> (uncompressed, highest quality), <strong>OPUS</strong> (efficient compression, good for streaming), and <strong>FLAC</strong> (lossless compression).</p>
+<h3>TTS Use Cases</h3>
+<ul>
+<li>Generate audio versions of written content for accessibility</li>
+<li>Create narration for presentations or training materials</li>
+<li>Build read-aloud functionality into applications</li>
+<li>Prototype voice interfaces before investing in custom voice work</li>
+</ul>
+<p>The <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/tts_basic.py">tts_basic.py</a>, <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/tts_voices.py">tts_voices.py</a>, and <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/tts_formats.py">tts_formats.py</a> examples in the companion repository demonstrate all of these capabilities.</p>
+<hr />
+<h2>Handling Long Audio: Chunking Strategies</h2>
+<p>The STT endpoint is optimized for clips up to about 10 minutes. For longer recordings, you should split the audio into chunks before uploading. This avoids timeout issues, keeps memory usage manageable, and gives you per-chunk error recovery.</p>
+<h3>Python with pydub</h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pydub</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioSegment</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+<span class="n">API_KEY</span> <span class="o">=</span> <span class="s2">&quot;mr2_your-api-key&quot;</span>
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.uidaho.edu&quot;</span>
+
+<span class="n">audio</span> <span class="o">=</span> <span class="n">AudioSegment</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;lecture.mp3&quot;</span><span class="p">)</span>
+<span class="n">chunk_ms</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">1000</span>  <span class="c1"># 5-minute chunks</span>
+
+<span class="n">transcript_parts</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">chunk_ms</span><span class="p">):</span>
+    <span class="n">chunk</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunk_ms</span><span class="p">]</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">&quot;mp3&quot;</span><span class="p">)</span>
+
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BASE_URL</span><span class="si">}</span><span class="s2">/v1/audio/transcriptions&quot;</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">API_KEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+        <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chunk_</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="n">chunk_ms</span><span class="si">}</span><span class="s2">.mp3&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="s2">&quot;audio/mpeg&quot;</span><span class="p">)},</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{},</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">transcript_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
+
+<span class="n">full_transcript</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">transcript_parts</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<h3>Bash with ffmpeg</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Split into 5-minute chunks</span>
+ffmpeg<span class="w"> </span>-i<span class="w"> </span>lecture.mp3<span class="w"> </span>-f<span class="w"> </span>segment<span class="w"> </span>-segment_time<span class="w"> </span><span class="m">300</span><span class="w"> </span>-c<span class="w"> </span>copy<span class="w"> </span>chunk_%03d.mp3
+
+<span class="c1"># Transcribe each chunk</span>
+<span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span>chunk_*.mp3<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-F<span class="w"> </span><span class="s2">&quot;file=@</span><span class="nv">$f</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-F<span class="w"> </span><span class="s2">&quot;response_format=text&quot;</span>
+<span class="k">done</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Each chunk is a separate API request. At the default STT rate of 200 tokens per request, a one-hour file split into twelve five-minute chunks costs 2,400 tokens total.</p>
+<p>The companion repository includes full working examples for both approaches: <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/stt_long_audio.py">stt_long_audio.py</a> (Python with pydub) and <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/stt_chunk_ffmpeg.sh">stt_chunk_ffmpeg.sh</a> (Bash with ffmpeg).</p>
+<hr />
+<h2>Multi-Language Support</h2>
+<p>Whisper supports 99 languages. Providing a language hint via the <code>language</code> parameter improves both accuracy and speed, especially for non-English audio or audio with accented speech.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># French interview</span>
+curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview_fr.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;language=fr&quot;</span>
+
+<span class="c1"># Spanish focus group</span>
+curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@focus_group_es.m4a&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;language=es&quot;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>Accuracy varies by language. High-resource languages like English, Spanish, French, and German typically achieve 3 to 8% word error rates. Low-resource languages may have higher error rates and should be reviewed more carefully. See <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/stt_language.py">stt_language.py</a> for a working example.</p>
+<hr />
+<h2>Batch Transcription</h2>
+<p>Have a folder full of interview recordings? The <a href="https://github.com/sheneman/mindrouter_voice/blob/main/examples/stt_batch.py">stt_batch.py</a> example walks a directory, finds all supported media files, and transcribes each one, saving the transcripts as <code>.txt</code> files:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">MINDROUTER_API_KEY</span><span class="o">=</span><span class="s2">&quot;mr2_your-api-key&quot;</span>
+python<span class="w"> </span>stt_batch.py<span class="w"> </span>/path/to/recordings/<span class="w"> </span>--output-dir<span class="w"> </span>/path/to/transcripts/
+</code></pre></div>
+
+<p><br></p>
+<p>It supports <code>--language</code> for non-English audio and <code>--skip-existing</code> to resume interrupted batch jobs.</p>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>Security Summary</h2>
+<p>To pull this all together, here is why on-premises voice processing matters:</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Cloud Transcription</th>
+<th>MindRouter On-Prem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data leaves your network</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Third-party data processor</td>
+<td>Yes (requires DUA/BAA)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Risk of training data use</td>
+<td>Depends on provider ToS</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Cross-border data transfer</td>
+<td>Possible</td>
+<td>No</td>
+</tr>
+<tr>
+<td>IRB protocol complexity</td>
+<td>Higher (must disclose processor)</td>
+<td>Lower (local infrastructure)</td>
+</tr>
+<tr>
+<td>Biometric data exposure</td>
+<td>Audio sent to external servers</td>
+<td>Audio stays on campus</td>
+</tr>
+</tbody>
+</table>
+<p>This is not a theoretical distinction. It is the difference between a two-paragraph IRB amendment and a multi-month negotiation over data use agreements.</p>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>Getting Started</h2>
+<p><strong>1. Get an API key.</strong> Log in to the <a href="https://mindrouter.uidaho.edu/dashboard">MindRouter dashboard</a> and create an API key from the API Keys page.</p>
+<p><strong>2. Clone the examples.</strong>
+   <code>bash
+   git clone https://github.com/sheneman/mindrouter_voice.git
+   cd mindrouter_voice
+   pip install -r requirements.txt</code>
+<br></p>
+<p><strong>3. Set your key.</strong>
+   <code>bash
+   export MINDROUTER_API_KEY="mr2_your-api-key"</code>
+<br></p>
+<p><strong>4. Transcribe something.</strong>
+   <code>bash
+   python examples/stt_basic.py your_recording.mp3</code>
+<br></p>
+<p><strong>5. Explore the output formats.</strong>
+   <code>bash
+   python examples/stt_output_formats.py your_recording.mp3</code></p>
+<p><br></p>
+<p>The full set of examples is at <a href="https://github.com/sheneman/mindrouter_voice">github.com/sheneman/mindrouter_voice</a>.</p>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2>What's Next</h2>
+<p>The Voice API is actively being developed. Areas we are exploring include:</p>
+<ul>
+<li><strong>Streaming STT</strong> for real-time transcription during live events</li>
+<li><strong>Speaker diarization</strong> to identify who is speaking in multi-speaker recordings</li>
+<li><strong>Server-side chunking</strong> to handle long audio without client-side splitting</li>
+<li><strong>Duration-based quota</strong> to charge proportionally to audio length instead of per-request</li>
+</ul>
+<p>If you have ideas, feature requests, or feedback, reach out to <a href="mailto:mindrouter@uidaho.edu">mindrouter@uidaho.edu</a> or open an issue on the <a href="https://github.com/ui-insight/MindRouter">MindRouter GitHub repository</a>.</p>
+<p><br></p>
+<hr />
+<p><br></p>
+<p><em>MindRouter is developed by the Research Computing and Data Services (RCDS) group at the Institute for Interdisciplinary Data Sciences (IIDS), University of Idaho. The Voice API is available to all University of Idaho users with a MindRouter account.</em></p>
+                    </article>
+                    <hr class="my-5">
+                    <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">
+                        <a class="flex-fill text-start text-decoration-none" href="/blog/conversations-that-remember-mindrouters-new-responses-and-conversations-apis/"><span class="d-block text-muted" style="font-size:0.78rem;">&larr; Newer post</span><span>Conversations That Remember: MindRouter Now Supports OpenAI Responses and Conversations APIs</span></a>
+                        <a class="flex-fill text-end text-decoration-none" href="/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/"><span class="d-block text-muted" style="font-size:0.78rem;">&rarr; Older post</span><span>Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="site-footer py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="/blog/feed.xml" class="text-muted"><i class="bi bi-rss"></i> RSS</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "dateModified": "2026-07-27T12:17:41+00:00",
+    "datePublished": "2026-05-18T16:18:30+00:00",
+    "description": "Secure, on-premises speech-to-text and text-to-speech via MindRouter's Voice API, powered by OpenAI Whisper and Kokoro on dedicated GPUs, with a focus on resea\u2026",
+    "headline": "From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter",
+    "image": [
+        "https://mindrouter.ai/blog/images/2026/05/18/1414/1414cf86ae8a7d6c150fb84c5888142409f2b282665ee1d198a08731b333d1c9_da719756.png",
+        "https://mindrouter.ai/blog/images/2026/05/18/388b/388bc5b417d9fd0057f765fbf3a81d30bc98be4ee0b72c9a87aad283810310e4_32753576.png",
+        "https://mindrouter.ai/blog/images/2026/05/18/a881/a88114189da22e88eb4ec7761337d1860692e127facca1fa86d426ff85ad2557_7298a0c0.png",
+        "https://mindrouter.ai/blog/images/2026/05/18/a0cf/a0cfa7d9c5e77707263abce7ca62e1b0b703ee3fdd92b8b5b5aee5557c6715c6_2258d48b.png",
+        "https://mindrouter.ai/blog/images/2026/05/18/5ac0/5ac0b4356575fc478adaf2b53e789f518977f1c70af9b7083b917a772d22ee84_a38e3119.png"
+    ],
+    "mainEntityOfPage": "https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/",
+    "publisher": {
+        "@type": "Organization",
+        "name": "MindRouter"
+    },
+    "url": "https://mindrouter.ai/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/"
+}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

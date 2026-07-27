@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web — MindRouter Blog</title>
+    <meta name="description" content="How to wire MindRouter&#x27;s web search into chats, scripts, apps, and agents using skills and MCP.">
+    <meta property="og:title" content="Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web — MindRouter Blog">
+    <meta property="og:description" content="How to wire MindRouter&#x27;s web search into chats, scripts, apps, and agents using skills and MCP.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/">
+    <link rel="alternate" type="application/rss+xml" title="MindRouter Blog" href="/blog/feed.xml">
+    <meta property="article:published_time" content="2026-05-01T16:57:48+00:00">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/blog.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css" rel="stylesheet">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <p class="mb-3"><a href="/blog/" class="text-decoration-none text-muted" style="font-size:0.85rem;">&larr; All posts</a></p>
+                    <h1 class="mb-2">Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web</h1>
+                    <p class="text-muted mb-4" style="font-size:0.9rem;"><time datetime="2026-05-01T16:57:48+00:00">May 1, 2026</time></p>
+                    <article class="blog-content">
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/29/3bef/3beff1ec463dbc0bfd828f8e38c55ed3fa7c053def15984c3c056b170ed70c91_815dd1cb.png" alt="ChatGPT Image Apr 29, 2026, 01_34_05 PM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Large language models are wonderfully knowledgeable... up until the day their training data ran out. Ask one about your favorite framework's brand new release, last week's headline, or the version number of a library that shipped this morning, and you'll often get a confident answer that's just a little bit <em>yesterday</em> or even made up.</p>
+<p>The fix is simple in concept: let the model peek at the web. The fix is harder in practice: <strong>somebody has to actually do the searching.</strong> The model can't reach the internet on its own, and most agentic tools don't ship with a built-in search just ready to go. They expect <em>you</em> to bring one.</p>
+<p>That's where MindRouter comes in. We run a single, authenticated web-search endpoint that any of your tools — your terminal, your Python scripts, your Claude Code session, your ForgeCode agent, your Cowork sessions — can call with a single API key. We also provide a simple hosted MCP server that your agents will know how to use.   </p>
+<p>We like to call it <strong>BYOS: Bring Your Own Search.</strong> Configure it once, use it everywhere.</p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/29/24ba/24bad57e265c9830bba203bc5b2bf9064e5a870ca384fa10b85efe1601417d41_e03de83f.png" alt="ChatGPT Image Apr 29, 2026, 01_45_05 PM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>This post walks you through every way you can plug into it.</p>
+<hr />
+<h2>A few things you should know before you search</h2>
+<p>Before we dive into examples, here's the short, honest disclosure that every MindRouter user deserves up front:</p>
+<p><strong>1. Searches are powered by Brave.</strong> By default, MindRouter's search endpoint forwards your query to the <a href="https://brave.com/search/api">Brave Search API</a>. Brave is fast, high-quality, and privacy-respecting, but it <em>is</em> a third-party cloud service. The text of every search query you submit will leave the University of Idaho's MindRouter instance and travel to Brave's servers for processing. If you wouldn't paste a query into google.com, don't paste it into MindRouter search either. (Self-hosted SearXNG is also supported as an alternative provider.)</p>
+<p><strong>2. Every search is metered.</strong> Each call to the search endpoint deducts a fixed number of tokens (default: <strong>50 tokens</strong>) from the quota tied to your MindRouter API key. Every search costs the same flat amount in tokens, and it's tracked alongside your normal inference usage in the dashboard. Admins can tune that number, and they can even set it to zero. But the rule is the same: <strong>searches are linked to your API key.</strong></p>
+<p><strong>3. Every search is logged.</strong> All MindRouter interactions are logged and archived on our servers, including web search queries.  This is useful from a cybersecurity perspective and to help us improve your user experience.</p>
+<p><strong>4. You'll need an API key.</strong> Hop over to <a href="https://mindrouter.uidaho.edu/dashboard">mindrouter.uidaho.edu/dashboard</a>, generate a key (it'll start with <code>mr2_</code>), and stash it somewhere safe. Every method below uses the same key.</p>
+<p><br> </p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/29/3b89/3b89c4e088734c1dd7844e28b9efb77963885b52c0055bcc64e00e5587fd062d_ef989954.png" alt="dee.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<h4>Done? Great. Let's search!</h4>
+<hr />
+<h2>Method 1: The Chat Toggle</h2>
+<h4>(zero code, one click)</h4>
+<p><br></p>
+<p>If all you want is for MindRouter's built-in chat to ground its answers in fresh web results, you don't need to write a thing. Open the chat at <code>mindrouter.uidaho.edu/chat</code>, look at the input area, and tap the little magnifying-glass button on the left side. Gray means off; solid blue means on.</p>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
+  <img src="/blog/images/2026/04/29/12f1/12f10720e86f42bf9edb40b695673c74b35d0afa6fe31f3edec46daf627bd506_1b52902b.png" alt="chee.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Type a question. Hit send. While the model is "thinking," you'll see a spinning globe and the message <em>"Searching the web..."</em> — that's MindRouter quietly searching the web, dropping the top results into the model's system prompt, and asking it to weave them into the answer. The reply streams back like normal, complete with cited URLs.</p>
+<p><strong>Cited response:</strong> A finished answer that includes a couple of source URLs, demonstrating that the model used the search results.</p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/29/fe53/fe530afb5b07868947bf959a7875529d73f1a8d7ab6c6d03fa0ff07260fdda26_cbc0b60a.png" alt="gee.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>The toggle remembers your preference between sessions (it's saved in your browser's <code>localStorage</code>), so you can flip it on once and forget about it. If a search ever fails, the chat just proceeds without it. No error popups, no broken conversations.</p>
+<p>This method is perfect if you're the end user and you just want better answers. The next three methods are for when you want to give that same superpower to your <em>code</em> and <em>agents</em>.</p>
+<hr />
+<h2>Method 2: The MCP Server</h2>
+<h4>(when you want your agent to <em>just decide</em> to search)</h4>
+<p><br></p>
+<p><strong>Model Context Protocol (MCP)</strong> is an open standard for exposing tools to AI agents.</p>
+<p>We now host an MCP server directly on MindRouter itself. No Python to install, no local process to manage: you register the MindRouter MCP server with your preferred agentic framework and your agents can use the tools (e.g. web-search) provided by the MCP Server.</p>
+<p>The MindRouter MCP server uses SSE (Server-Sent Events) transport and calls the search provider directly on the server side, so there's no extra HTTPS hop.</p>
+<p><br> </p>
+<h3>Wiring in the MCP Server</h3>
+<p>You will need to register the MindRouter MCP server with your agentic tools.   With Claude Code, you can do this with a simple command from the CLI:</p>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>claude mcp add mindrouter https://mindrouter.uidaho.edu/mcp/sse \
+  --transport sse \
+  -H &quot;Authorization: Bearer mr2_your_key_here&quot;
+</code></pre></div>
+
+<p><br></p>
+<p><strong>That's it!</strong>  Now you can check that it is successfully registered and connected:</p>
+<div class="codehilite"><pre><span></span><code>$ claude mcp list
+mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
+</code></pre></div>
+
+<p><br></p>
+<p>Alternatively, you can manually register the MCP Server using a snippet of JSON:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;mindrouter&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sse&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://mindrouter.uidaho.edu/mcp/sse&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;Authorization&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bearer mr2_your_key_here&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>That's it. Run <code>/mcp</code> inside Claude Code to verify.</p>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
+  <img src="/blog/images/2026/05/01/b1e3/b1e3c0d4111674d7a40277ee946e200301dd6e68bead36e5141a4c796d760913_e13d7f57.png" alt="ChatGPT Image May 1, 2026, 06_58_19 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
+  <img src="/blog/images/2026/05/01/d372/d372112827219112f8806bd92d4455b9cfdf958d2d14c44da8c93170c581f45e_574be1fd.png" alt="ChatGPT Image May 1, 2026, 09_15_22 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
+  <img src="/blog/images/2026/05/01/5419/5419fcb6621a132ea9b31a366391d6f86915fac2dec353bfcc12c06968dc5ab6_3828bdca.png" alt="ChatGPT Image May 1, 2026, 09_19_04 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Claude Code in particular may still try and fail to use its Anthropic-based web search.   Instructing Claude to remember to use MindRouter search may help:</p>
+<div class="codehilite"><pre><span></span><code>Use mindrouter for web search.   Remember this.
+</code></pre></div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/01/b345/b3455dde02b39c4b1e2b8f11f09baaa6f70d4e9d6a6b11ac7e551d1902c1c76b_143e0143.png" alt="ChatGPT Image May 1, 2026, 09_29_51 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p><strong>Claude Cowork</strong>, <strong>Cursor</strong>, <strong>ForgeCode</strong>, <strong>OpenCode</strong>, <strong>Hermes</strong>, and any other MCP-aware client all use the same/similar JSON config format. Drop this into the right config file (<code>.mcp.json</code>, <code>.cursor/mcp.json</code>, your Cowork plugin manifest, etc.)</p>
+<p><strong>NOTE: A future MindRouter Blog Post will cover how to configure the Claude desktop app to use MindRouter, including the MCP server and web search tool.</strong></p>
+<h3>What it feels like in practice</h3>
+<p>The user asks something like <em>"What's the latest stable release of Python?"</em> and the agent (without being told to search) recognizes the question is about current information, calls <code>web_search</code> under the hood, and answers with a fresh, cited response. No <code>/web-search</code> command, no manual setup, no fuss.</p>
+<p><strong>That's the magic of MCP: tools become a part of the agent's vocabulary, not a separate command system.</strong></p>
+<hr />
+<h2>Method 3: The REST API</h2>
+<h4>(curl, Python, anything that speaks HTTP)</h4>
+<p><br></p>
+<p>Everything below this line is fundamentally just a wrapper around the same HTTP endpoint:</p>
+<div class="codehilite"><pre><span></span><code>POST https://mindrouter.uidaho.edu/v1/search
+</code></pre></div>
+
+<p><br></p>
+<p>If you can make an HTTP request, you can use MindRouter search. Here's the smallest possible example.</p>
+<h3>A search in one line of curl</h3>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/search<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;query&quot;: &quot;What is the current weather in Moscow, Idaho&quot;, &quot;max_results&quot;: 5}&#39;</span>
+</code></pre></div>
+
+<p><br></p>
+<p>You get back JSON that looks like this:</p>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/05/01/d0cf/d0cf77a4b72080e49438f80701dc6cbc78f228a284daf2735d7b133f4832ae02_7c37b1bd.png" alt="ChatGPT Image May 1, 2026, 09_37_57 AM.png" style="width: 100%; height: auto;">
+</div>
+
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/29/0eba/0eba8ecaec1dc97c1392b43fa7c0f40b84dac2fe34f567c2df3ffbc0c68084cb_fcf0ae71.png" alt="ss.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<hr />
+<h3>The Python version</h3>
+<p>Same idea, more readable:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">requests</span>
+
+<span class="n">API_KEY</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MINDROUTER_API_KEY&quot;</span><span class="p">]</span>
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.uidaho.edu&quot;</span>
+
+<span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BASE_URL</span><span class="si">}</span><span class="s2">/v1/search&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">API_KEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="s2">&quot;Python 3.14 release highlights&quot;</span><span class="p">,</span> <span class="s2">&quot;max_results&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">},</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provider: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">  (</span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;total_results&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> hits)</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><br></p>
+<p>If you want to do <strong>classic RAG</strong> — search first, then feed the results into a chat completion — it's a few extra lines:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">context</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;- </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;snippet&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">chat</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BASE_URL</span><span class="si">}</span><span class="s2">/v1/chat/completions&quot;</span><span class="p">,</span>
+    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">API_KEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;qwen3.5-122b&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Use these search results to answer. Cite URLs.</span><span class="se">\n\n</span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What&#39;s new in Python 3.14?&quot;</span><span class="p">},</span>
+        <span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">chat</span><span class="p">[</span><span class="s2">&quot;choices&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">])</span>
+</code></pre></div>
+
+<p><br></p>
+<p>That's the whole REST API. Two endpoints (<code>/v1/search</code> and <code>/api/search</code> — they're identical, the second one matches Ollama's URL style), one auth header, one JSON body. Done.</p>
+<p>A couple of practical notes:</p>
+<ul>
+<li>Queries can be 1–2000 characters. <code>max_results</code> is 1–50 (server default 10).</li>
+<li>If you get a <code>429</code>, you've blown through your token quota. Take a break or talk to your admin about a bigger budget.</li>
+<li>A <code>503</code> means search is currently disabled or the provider is down — fall back gracefully.</li>
+</ul>
+<hr />
+<h2>Method 4: The Agent Skill</h2>
+<h4>(Markdown that teaches your agent to search)</h4>
+<p>The MindRouter MCP server will address most agentic use, but <strong>Agent Skills</strong> represent an alternative approach worth mentioning.</p>
+<p>Most of the modern coding agents — Claude Code, ForgeCode, OpenCode, Codex, and friends — support <strong>skills</strong>: little Markdown files that drop into a <code>.claude/skills/</code> (or equivalent) directory and teach the agent how to do a specific task. You can think of a skill as a tiny instruction manual the agent reads on demand.</p>
+<p>Further, agentic harnesses like Claude Code or Cowork, ForgeCode, or OpenCode can be configured to point to MindRouter.   We covered Claude Code configuration in this <A HREF="https://mindrouter.uidaho.edu/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter">previous blog post</A>.</p>
+<p>We ship a <code>web-search</code> skill as part of the <A HREF="https://github.com/ui-insight/MindRouter">MindRouter GitHub Repository</A>. It looks like this:</p>
+<div class="codehilite"><pre><span></span><code>agentic_ai/
+└── skills/
+    └── web-search/
+        └── SKILL.md
+</code></pre></div>
+
+<p>The <code>SKILL.md</code> file has a YAML front-matter block (so the agent knows what the skill is <em>for</em>) and a Markdown body (the actual instructions, including the curl template, the response schema, and a few rules about how to format results for the user).</p>
+<h3>Installing it in Claude Code</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Project-level — anyone working in this repo can use it</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>.claude/skills
+cp<span class="w"> </span>-r<span class="w"> </span>agentic_ai/skills/web-search<span class="w"> </span>.claude/skills/
+
+<span class="c1"># Or user-level — available everywhere</span>
+cp<span class="w"> </span>-r<span class="w"> </span>agentic_ai/skills/web-search<span class="w"> </span>~/.claude/skills/
+</code></pre></div>
+
+<p><br></p>
+<h2>Or, let Claude Code do the work for you:</h2>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>$ export ANTHROPIC_BASE_URL=&quot;https://mindrouter.uidaho.edu/anthropic&quot;
+$ export ANTHROPIC_AUTH_TOKEN=&quot;&lt;YOUR_MINDROUTER_API_KEY&gt;&quot;
+$ export ANTHROPIC_MODEL=&quot;qwen/qwen3.6-27b&quot;
+$ export ANTHROPIC_DEFAULT_SONNET_MODEL=&quot;openai/gpt-oss-120b&quot;
+$ export ANTHROPIC_DEFAULT_HAIKU_MODEL=&quot;openai/gpt-oss-20b&quot;
+$ claude --init
+</code></pre></div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 80%;">
+  <img src="/blog/images/2026/04/30/838e/838ed080cadb2ff70cf5548af19647add690452bc0a786db7b0b6d7daf53ecd2_a193a7aa.png" alt="fffff.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>And then simply:</p>
+<div class="codehilite"><pre><span></span><code>Look at https://github.com/ui-insight/mindrouter/agentic_ai and install those sweet skills here. 
+</code></pre></div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/30/11bc/11bce1b0e3094f7afb3f24471c9b3391365937f1f9c19cf2b1ccbc45f10a84d8_82f48960.png" alt="Untitled 2.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>Then, tell Claude Code to remember this and always use this skill going forward for web searches:</p>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>Always use the web-search skill when searching the web for this project.  Commit that to memory in CLAUDE.md.   
+</code></pre></div>
+
+<p><br></p>
+<p>Now go ahead and use Claude Code with MindRouter models and MindRouter web search!</p>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>What movies are playing right now in Moscow, Idaho?&quot;
+</code></pre></div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/30/8407/8407d4cdbd7ec1eb1c6975a000397496bd29a950cb36076ea90373dddd7b72a5_49060837.png" alt="Untitled 4.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>For <strong>ForgeCode</strong>, <strong>OpenCode</strong>, <strong>Hermes</strong>, and other Markdown-skill-aware agents, the convention is the same: drop the <code>web-search</code> folder into the tool's skills or commands directory. If your tool doesn't have a dedicated skills directory yet, you can paste the contents of <code>SKILL.md</code> into the system prompt or project context — it's plain Markdown and any LLM can follow it.</p>
+<h3>Explicit use in Claude Code</h3>
+<p>In Claude Code, you can force the LLM to explicitly use the skill:</p>
+<div class="codehilite"><pre><span></span><code>/web-search What is MindRouter?
+</code></pre></div>
+
+<p>And the agent comes back with something like:</p>
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/30/7492/74925bb3cb97bb49043e134666ff0f8bfa487ac9c1fa6d798f7abf92cafe5ac6_950f3af0.png" alt="juju.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<h3>Using the skill with ForgeCode</h3>
+<p>Using this web-search skill is even easier in some of the open source agentic harnesses like <A HREF="https://forgecode.dev">ForgeCode</A>:</p>
+<div class="codehilite"><pre><span></span><code>$ export MINDROUTER_API_KEY=mr2_your_key_here
+$ forge
+</code></pre></div>
+
+<p><br></p>
+<p>Then have the agent go fetch and install the MindRouter search skill:</p>
+<div class="codehilite"><pre><span></span><code>Go get the web-search skill from https://github.com/ui-insight/mindrouter/agentic_ai
+</code></pre></div>
+
+<p><br></p>
+<p>You should see something like:</p>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>The web-search skill is now installed in this project at .claude/skills/web-search/SKILL.md.
+To enable it, you need to set your MindRouter API key:
+
+export MINDROUTER_API_KEY=mr2_your_key_here
+
+You can get one from the MindRouter dashboard (https://mindrouter.uidaho.edu/dashboard/api-keys).
+Once the key is set, I&#39;ll use the web-search skill automatically whenever I need to search the web — it calls POST /v1/search against the MindRouter API, which routes through Brave Search or SearXNG and returns structured results with titles, URLs, snippets, and published dates.
+</code></pre></div>
+
+<p><br></p>
+<p>Now you can do web searches through MindRouter in ForgeCode:</p>
+<p><br></p>
+<div class="codehilite"><pre><span></span><code>Show me information about the upcoming renaissance fair in Moscow, Idaho
+</code></pre></div>
+
+<p><br></p>
+<div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
+  <img src="/blog/images/2026/04/30/2956/2956b74fbeadb78ec8109295d3f1b95340c9877227e5c4e51e37f3b4382f6f9d_77ba657b.png" alt="rr.png" style="width: 100%; height: auto;">
+</div>
+
+<p><br></p>
+<p>The skill needs only one environment variable to work: <code>MINDROUTER_API_KEY</code> (required). Set it in your shell, and every skill-aware agent on your agentic harness suddenly knows how to search the web.</p>
+<hr />
+<h2>Wrapping up</h2>
+<p>The web is the world's best, freshest, messiest knowledge base. Your LLMs and agents deserve access to it, and you deserve a clean, single place to manage that access.</p>
+<p>That's the whole pitch behind MindRouter's BYOS approach: <strong>one endpoint, one key, every tool.</strong> Whether you're poking at curl in a terminal, writing a script, configuring Claude Code, customizing Claude Cowork, kicking off a ForgeCode build, running OpenCode, or experimenting with Hermes — the same MCP interface and REST API is waiting for you, and the same search results come back.</p>
+<p>Generate a key, set the environment variable, pick your method (MCP, Skill, REST API), and go searching!</p>
+<p>Happy querying. 🌐</p>
+<hr />
+<h3>Further reading</h3>
+<ul>
+<li><strong>MindRouter Documentation:</strong> <a href="https://mindrouter.uidaho.edu/documentation#web-search">MindRouter Web Search Documentation</a></li>
+<li><strong>API key management:</strong> <a href="https://mindrouter.uidaho.edu/dashboard/api-keys">mindrouter.uidaho.edu/dashboard/api-keys</a></li>
+<li><strong>Brave Search API (provider docs):</strong> <a href="https://brave.com/search/api">brave.com/search/api</a></li>
+<li><strong>Model Context Protocol:</strong> <a href="https://modelcontextprotocol.io">modelcontextprotocol.io</a></li>
+<li><strong>The skill and MCP server source:</strong> look in <code>agentic_ai/skills/web-search/</code> and <code>agentic_ai/mcp/search/</code> in the <A HREF="https://github.com/ui-insight/mindrouter">MindRouter GitHub Repository</A>.</li>
+</ul>
+<p><em>Questions, bug reports, or feature requests? Drop us a note — we love hearing how people are wiring MindRouter into their agentic stacks.</em></p>
+                    </article>
+                    <hr class="my-5">
+                    <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">
+                        <a class="flex-fill text-start text-decoration-none" href="/blog/from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter/"><span class="d-block text-muted" style="font-size:0.78rem;">&larr; Newer post</span><span>From Audio to Text: Secure On-Campus Dictation and Transcription with MindRouter</span></a>
+                        <a class="flex-fill text-end text-decoration-none" href="/blog/writing-robust-resilient-python-clients-for-mindrouter/"><span class="d-block text-muted" style="font-size:0.78rem;">&rarr; Older post</span><span>Writing Robust, Resilient Python Clients for MindRouter</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="site-footer py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Open-Source LLM Inference Load Balancer</p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                Developed by <a href="https://hpc.uidaho.edu" class="text-muted">Research Computing &amp; Data Services (RCDS)</a>
+                at the <a href="https://www.uidaho.edu" class="text-muted">University of Idaho</a>
+                &middot;
+                <a href="https://www.iids.uidaho.edu" class="text-muted">Institute for Interdisciplinary Data Sciences (IIDS)</a>
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+                &nbsp;&middot;&nbsp;
+                <a href="/blog/feed.xml" class="text-muted"><i class="bi bi-rss"></i> RSS</a>
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "dateModified": "2026-07-27T12:17:27+00:00",
+    "datePublished": "2026-05-01T16:57:48+00:00",
+    "description": "How to wire MindRouter's web search into chats, scripts, apps, and agents using skills and MCP.",
+    "headline": "Bring Your Own Search: Giving Your LLMs and Agents a Window to the Live Web",
+    "image": [
+        "https://mindrouter.ai/blog/images/2026/04/29/3bef/3beff1ec463dbc0bfd828f8e38c55ed3fa7c053def15984c3c056b170ed70c91_815dd1cb.png",
+        "https://mindrouter.ai/blog/images/2026/04/29/24ba/24bad57e265c9830bba203bc5b2bf9064e5a870ca384fa10b85efe1601417d41_e03de83f.png",
+        "https://mindrouter.ai/blog/images/2026/04/29/3b89/3b89c4e088734c1dd7844e28b9efb77963885b52c0055bcc64e00e5587fd062d_ef989954.png",
+        "https://mindrouter.ai/blog/images/2026/04/29/12f1/12f10720e86f42bf9edb40b695673c74b35d0afa6fe31f3edec46daf627bd506_1b52902b.png",
+        "https://mindrouter.ai/blog/images/2026/04/29/fe53/fe530afb5b07868947bf959a7875529d73f1a8d7ab6c6d03fa0ff07260fdda26_cbc0b60a.png",
+        "https://mindrouter.ai/blog/images/2026/05/01/b1e3/b1e3c0d4111674d7a40277ee946e200301dd6e68bead36e5141a4c796d760913_e13d7f57.png",
+        "https://mindrouter.ai/blog/images/2026/05/01/d372/d372112827219112f8806bd92d4455b9cfdf958d2d14c44da8c93170c581f45e_574be1fd.png",
+        "https://mindrouter.ai/blog/images/2026/05/01/5419/5419fcb6621a132ea9b31a366391d6f86915fac2dec353bfcc12c06968dc5ab6_3828bdca.png",
+        "https://mindrouter.ai/blog/images/2026/05/01/b345/b3455dde02b39c4b1e2b8f11f09baaa6f70d4e9d6a6b11ac7e551d1902c1c76b_143e0143.png",
+        "https://mindrouter.ai/blog/images/2026/05/01/d0cf/d0cf77a4b72080e49438f80701dc6cbc78f228a284daf2735d7b133f4832ae02_7c37b1bd.png",
+        "https://mindrouter.ai/blog/images/2026/04/29/0eba/0eba8ecaec1dc97c1392b43fa7c0f40b84dac2fe34f567c2df3ffbc0c68084cb_fcf0ae71.png",
+        "https://mindrouter.ai/blog/images/2026/04/30/838e/838ed080cadb2ff70cf5548af19647add690452bc0a786db7b0b6d7daf53ecd2_a193a7aa.png",
+        "https://mindrouter.ai/blog/images/2026/04/30/11bc/11bce1b0e3094f7afb3f24471c9b3391365937f1f9c19cf2b1ccbc45f10a84d8_82f48960.png",
+        "https://mindrouter.ai/blog/images/2026/04/30/8407/8407d4cdbd7ec1eb1c6975a000397496bd29a950cb36076ea90373dddd7b72a5_49060837.png",
+        "https://mindrouter.ai/blog/images/2026/04/30/7492/74925bb3cb97bb49043e134666ff0f8bfa487ac9c1fa6d798f7abf92cafe5ac6_950f3af0.png",
+        "https://mindrouter.ai/blog/images/2026/04/30/2956/2956b74fbeadb78ec8109295d3f1b95340c9877227e5c4e51e37f3b4382f6f9d_77ba657b.png"
+    ],
+    "mainEntityOfPage": "https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/",
+    "publisher": {
+        "@type": "Organization",
+        "name": "MindRouter"
+    },
+    "url": "https://mindrouter.ai/blog/bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web/"
+}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>
