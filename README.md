@@ -34,7 +34,15 @@ regenerates `blog/index.html` and `blog/feed.xml`, and deletes any post director
 image the feed no longer lists — that is how un-syndication propagates. Rendering is
 deterministic, so a sync that changes nothing leaves the git tree clean.
 
-`.github/workflows/sync-blog.yml` runs it hourly and on demand (**Actions → Sync blog →
+> **The feed is currently campus-only.** `mindrouter.uidaho.edu` is split-horizon DNS:
+> on campus it resolves to `172.27.192.252` (private), and the public record
+> (`mindrouter-public.hpc.uidaho.edu`, `129.101.236.240`) does not answer. GitHub-hosted
+> runners therefore time out, so the hourly schedule in the workflow is commented out
+> and syncing is a manual step from a machine on the campus network. Re-enable the
+> `schedule:` block once the feed answers publicly, or point the job at a self-hosted
+> campus runner.
+
+`.github/workflows/sync-blog.yml` runs it on demand (**Actions → Sync blog →
 Run workflow**), committing only when the tree actually changed. The manual run takes
 two options: `dry_run` to preview, and `allow_empty_feed` — a safety catch, since the
 script refuses to delete every local post when the feed comes back empty (that shape is

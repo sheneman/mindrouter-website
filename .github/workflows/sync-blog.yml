@@ -5,9 +5,14 @@ name: Sync blog
 # blog rendering and the feed is the source of truth.
 
 on:
-  schedule:
-    # Hourly, off the hour to avoid the top-of-hour rush. Feed cache is 5 min.
-    - cron: '23 * * * *'
+  # The hourly schedule is disabled: GitHub-hosted runners cannot reach the
+  # feed. mindrouter.uidaho.edu is split-horizon — on campus it resolves to
+  # 172.27.192.252 (RFC1918), and the public record (mindrouter-public.hpc.
+  # uidaho.edu, 129.101.236.240) does not answer, so every scheduled run would
+  # fail on connection timeout. Restore this block once the feed is reachable
+  # from the public internet, or move the job to a self-hosted campus runner.
+  # schedule:
+  #   - cron: '23 * * * *'
   workflow_dispatch:
     inputs:
       allow_empty_feed:
