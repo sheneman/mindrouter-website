@@ -1,0 +1,63 @@
+name: Sync blog
+
+# Pulls the syndicated posts from the MindRouter gateway and regenerates the
+# blog/ subtree. The gateway no longer pushes to this repo; this site owns its
+# blog rendering and the feed is the source of truth.
+
+on:
+  schedule:
+    # Hourly, off the hour to avoid the top-of-hour rush. Feed cache is 5 min.
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      allow_empty_feed:
+        description: 'Allow an empty feed to delete every local post'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Report what would change without committing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-blog
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Pinned so rendering stays byte-identical between runs; a version bump
+      # is a deliberate change that shows up as one re-render commit.
+      - name: Install renderer
+        run: pip install 'markdown==3.6' 'pygments==2.19.1'
+
+      - name: Sync blog/ from the syndication feed
+        run: |
+          python tools/sync_blog.py --verbose \
+            ${{ inputs.allow_empty_feed && '--allow-empty-feed' || '' }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit and push if the tree changed
+        if: ${{ !inputs.dry_run }}
+        run: |
+          if [ -z "$(git status --porcelain -- blog)" ]; then
+            echo "blog/ unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name 'mindrouter-blog-sync'
+          git config user.email 'mindrouter-blog-sync@users.noreply.github.com'
+          git add -A blog
+          git commit -m 'blog: sync from MindRouter syndication feed'
+          git push
+          echo "### Blog updated" >> "$GITHUB_STEP_SUMMARY"
+          git show --stat --oneline HEAD >> "$GITHUB_STEP_SUMMARY"

@@ -1,6 +1,15 @@
-/* MindRouter blog article styles (generated; see blog_export.BLOG_CSS) */
+/* MindRouter blog article styles. Posts are rendered by tools/sync_blog.py from
+   the syndication feed; the codehilite classes come from python-markdown. */
 .blog-content { line-height: 1.8; }
 .blog-content h1, .blog-content h2, .blog-content h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+.blog-content blockquote {
+    margin: 1.5rem 0;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    border-left: 3px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
+}
+.blog-content blockquote > :last-child { margin-bottom: 0; }
+.blog-content hr { margin: 2rem 0; }
 .blog-content pre { background: var(--bs-tertiary-bg); color: var(--bs-body-color); padding: 1rem; border-radius: 6px; overflow-x: auto; }
 .blog-content code { font-size: 0.9em; }
 .blog-content p code { background: var(--bs-tertiary-bg); color: var(--bs-body-color); padding: 0.2em 0.4em; border-radius: 3px; }
