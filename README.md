@@ -28,9 +28,22 @@ of truth; `tools/build_docs.py` pulls the markdown and renders it into this site
 
 | Upstream | Page |
 | --- | --- |
-| `docs/index.md` | `documentation.html` |
+| `backend/app/dashboard/templates/public/documentation.html` | `documentation.html` |
 | `docs/images-api.md`, `video-api.md`, `voice-api.md` | `docs/<name>.html` |
 | `docs/media-studio-integration.md`, `architecture.md`, `scheduler.md`, `branding.md` | `docs/<name>.html` |
+
+The main page comes from the **in-app documentation template**, not `docs/index.md`: the
+template is what mindrouter.uidaho.edu/documentation serves and it covers far more (33
+sections vs 17 — document OCR, web search, MCP servers, agent skills, service API keys,
+data retention, email, DLP, security hardening). It is a Jinja template, but the Jinja is
+limited to block tags, so the content block is lifted out as-is. The `{{first_name}}`-style
+braces in the body are documentation of email-template placeholders and are deliberately
+left as literal text. Neither source is a superset of the other, so any `docs/index.md`
+section the in-app page lacks (currently Implementation Notes) is appended — matched by
+anchor, so it stops being appended if the in-app page ever gains it. Links to routes that only exist inside a deployment (`/docs`,
+`/redoc`, `/images`, `/dashboard/api-keys`) are unlinked, keeping their text — a dead link
+is worse than none — and links to the reference markdown on GitHub are pointed at the
+copies under `docs/`.
 
 ```bash
 pip install markdown                        # once

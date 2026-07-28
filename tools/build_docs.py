@@ -5,7 +5,7 @@ github.com/ui-insight/MindRouter is the source of truth for product
 documentation. This script pulls the markdown, rewrites it for a public site,
 and renders it into this site's chrome:
 
-  docs/index.md                     -> documentation.html
+  the in-app documentation template -> documentation.html
   docs/<name>.md (see PAGES)        -> docs/<name>.html
 
 Rewrites applied on the way through:
@@ -40,10 +40,25 @@ RAW_BASE = f"https://raw.githubusercontent.com/{REPO}/main"
 BLOB_BASE = f"https://github.com/{REPO}/blob/main"
 USER_AGENT = "mindrouter-website-docs-build/1.0 (+https://mindrouter.ai)"
 
-# Upstream markdown -> page on this site. index.md is the main documentation
-# page; the rest are the developer references and operator guides it links to.
+# The in-app documentation page is the fullest account of the product — it
+# carries sections docs/index.md does not (OCR, web search, MCP servers, agent
+# skills, service API keys, data retention, email, DLP, security hardening).
+# It is a Jinja template, but almost entirely static markup, so the content
+# block can be lifted straight out.
+TEMPLATE_PAGE = {
+    "src": "backend/app/dashboard/templates/public/documentation.html",
+    "out": "documentation.html",
+    "title": "Documentation",
+}
+
+# Merged into documentation.html for the sections the in-app page omits.
+SUPPLEMENT_MD = "docs/index.md"
+
+# Same topic, different heading in the two sources. Without this the section
+# would be appended a second time under its own anchor.
+SUPPLEMENT_ALIASES = {"voice-api": "voice"}
+
 PAGES = [
-    {"src": "docs/index.md", "out": "documentation.html", "title": "Documentation"},
     {"src": "docs/images-api.md", "out": "docs/images-api.html", "title": "Image Generation API"},
     {"src": "docs/video-api.md", "out": "docs/video-api.html", "title": "Video Generation API"},
     {"src": "docs/voice-api.md", "out": "docs/voice-api.html", "title": "Voice API"},
@@ -55,6 +70,17 @@ PAGES = [
 ]
 LINK_MAP = {Path(p["src"]).name: ("/" + p["out"]) for p in PAGES}
 LINK_MAP["index.md"] = "/documentation.html"
+
+# The in-app page links to the same references on GitHub; point them at the
+# copies we host.
+GITHUB_DOC_LINK = re.compile(
+    rf"https://github\.com/{re.escape(REPO)}/blob/[^/]+/docs/([A-Za-z0-9._-]+\.md)")
+
+# Links to routes that only exist inside a MindRouter deployment (/docs,
+# /redoc, /images, /video, /dashboard/api-keys). Unlinked rather than pointed
+# at a placeholder host: the wording reads fine without the anchor, and a dead
+# link is worse than none.
+APP_ROUTE_LINK = re.compile(r'<a\s[^>]*href="/(?!/)[^"]*"[^>]*>(.*?)</a>', re.DOTALL)
 
 # The upstream page opens with a numbered list of its own sections, which the
 # sticky sidebar already provides. The two sub-lists under it (pointers to the
@@ -414,6 +440,135 @@ SCROLLSPY_JS = """    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/
     </script>"""
 
 
+def extract_block(template: str, name: str) -> str:
+    match = re.search(r"\{%\s*block\s+" + name + r"\s*%\}(.*?)\{%\s*endblock\s*%\}",
+                      template, re.DOTALL)
+    if not match:
+        raise RuntimeError(f"template has no {{% block {name} %}}")
+    return match.group(1).strip()
+
+
+def further_reading_html() -> str:
+    """Links to the reference pages built from the markdown docs."""
+    items = "\n".join(
+        f'                    <li><a href="/{page["out"]}">{html.escape(page["title"])}</a></li>'
+        for page in PAGES)
+    return f"""            <section id="further-reading">
+                <h2>Further Reading</h2>
+                <p>Deeper references, each mirrored from the MindRouter repository:</p>
+                <ul>
+{items}
+                </ul>
+            </section>
+"""
+
+
+def supplement_sections(content: str, supplement_md: str, verbose: bool) -> tuple[str, list[tuple[str, str]]]:
+    """Append sections of docs/index.md that the in-app page does not cover.
+
+    Neither source is a superset of the other: the in-app template is far more
+    complete, but index.md carries Implementation Notes. Sections are matched by
+    anchor, so anything the in-app page gains later stops being appended here.
+    """
+    present = set(re.findall(r'<section id="([^"]+)"', content))
+    added, rendered = [], []
+    for heading, body in split_sections(supplement_md)[2]:
+        anchor = slug(heading)
+        if (heading == TOC_SECTION or not body.strip()
+                or anchor in present
+                or SUPPLEMENT_ALIASES.get(anchor) in present):
+            continue
+        added.append((anchor, heading))
+        rendered.append(
+            f'            <section id="{anchor}">\n'
+            f"                <h2>{render_inline(heading)}</h2>\n"
+            f"{decorate(render_markdown(body))}\n"
+            f"            </section>\n\n            <hr>\n"
+        )
+        if verbose:
+            print(f"    supplemented from docs/index.md: {heading}")
+    return "".join(rendered), added
+
+
+def build_template_page(page: dict, template: str, supplement_md: str = "",
+                        verbose: bool = False) -> str:
+    """Render the in-app documentation template into this site's chrome.
+
+    The Jinja is limited to block tags; the `{{first_name}}`-style braces in the
+    body are documentation of email-template placeholders and must survive as
+    literal text, so nothing substitutes them.
+    """
+    styles = extract_block(template, "extra_css")
+    content = extract_block(template, "content")
+
+    content = GITHUB_DOC_LINK.sub(
+        lambda m: LINK_MAP.get(m.group(1), m.group(0)), content)
+    content = APP_ROUTE_LINK.sub(lambda m: m.group(1), content)
+
+    source_note = (
+        f'            <p class="text-muted" style="font-size:0.85rem;">'
+        f'<i class="bi bi-git"></i> Mirrored from '
+        f'<a href="{BLOB_BASE}/{page["src"]}" target="_blank" rel="noopener">the MindRouter '
+        f'documentation page</a> in the MindRouter repository. Example hostnames are '
+        f'placeholders — substitute your own deployment.</p>\n'
+    )
+    # Sit the provenance note directly under the page intro.
+    anchor = '<p class="text-muted"><strong>Developed by</strong>'
+    end = content.find("</p>", content.find(anchor))
+    if anchor in content and end > 0:
+        content = content[:end + 4] + "\n\n" + source_note + content[end + 4:]
+
+    extra_html, extra_toc = ("", [])
+    if supplement_md:
+        extra_html, extra_toc = supplement_sections(content, supplement_md, verbose)
+
+    # Add the supplemented sections and the reference pages to the body, and
+    # both to the sidebar, so nothing on the page is unreachable from the TOC.
+    last_section = content.rfind("</section>")
+    if last_section > 0:
+        content = (content[:last_section + 10] + "\n\n            <hr>\n\n" + extra_html
+                   + further_reading_html() + content[last_section + 10:])
+    sidebar_end = content.find("</ul>")
+    if sidebar_end > 0:
+        entries = "".join(
+            f'                <li class="nav-item"><a class="nav-link" href="#{anchor}">'
+            f'{html.escape(plain(text))}</a></li>\n' for anchor, text in extra_toc)
+        entries += ('                <li class="nav-item"><a class="nav-link" '
+                    'href="#further-reading">Further Reading</a></li>\n')
+        content = content[:sidebar_end] + entries + "            " + content[sidebar_end:]
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{html.escape(page["title"])} - MindRouter</title>
+    <meta name="description" content="MindRouter documentation: API reference, deployment, scheduling, quotas, and operations for the open-source LLM inference load balancer.">
+    <script>
+    (function() {{
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    }})();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+{styles}
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+{NAV_HTML}
+    <main id="main-content">
+{content}
+    </main>
+{FOOTER_HTML}
+{SCROLLSPY_JS}
+</body>
+</html>
+"""
+
+
 def build_page(page: dict, markdown_text: str, verbose: bool = False) -> str:
     is_index = page["out"] == "documentation.html"
     title, intro_md, sections = split_sections(markdown_text)
@@ -527,24 +682,33 @@ def main() -> int:
     root = Path(args.root).resolve()
     changed, domain_report = [], []
 
+    def emit(page: dict, output: str) -> None:
+        dest = root / page["out"]
+        if dest.exists() and dest.read_text(encoding="utf-8") == output:
+            if args.verbose:
+                print(f"  unchanged {page['out']}")
+            return
+        changed.append(page["out"])
+        if args.verbose:
+            print(f"  {'update' if dest.exists() else 'create'} {page['out']}")
+        if not args.dry_run:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(output, encoding="utf-8")
+
     try:
+        template = load(TEMPLATE_PAGE["src"], args.source)
+        template = rewrite_domains(template, domain_report)
+        # docs/index.md fills the gaps the in-app page leaves (Implementation Notes).
+        supplement = smart_dashes(rewrite_links(strip_rules(
+            rewrite_domains(load(SUPPLEMENT_MD, args.source), domain_report))))
+        emit(TEMPLATE_PAGE,
+             build_template_page(TEMPLATE_PAGE, template, supplement, args.verbose))
+
         for page in PAGES:
             markdown_text = load(page["src"], args.source)
             markdown_text = rewrite_domains(markdown_text, domain_report)
             markdown_text = smart_dashes(rewrite_links(strip_rules(markdown_text)))
-            output = build_page(page, markdown_text, args.verbose)
-
-            dest = root / page["out"]
-            if dest.exists() and dest.read_text(encoding="utf-8") == output:
-                if args.verbose:
-                    print(f"  unchanged {page['out']}")
-                continue
-            changed.append(page["out"])
-            if args.verbose:
-                print(f"  {'update' if dest.exists() else 'create'} {page['out']}")
-            if not args.dry_run:
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_text(output, encoding="utf-8")
+            emit(page, build_page(page, markdown_text, args.verbose))
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -572,7 +736,7 @@ def main() -> int:
             print(f"    {entry} ({domain_report.count(entry)}x)")
 
     verb = "would update" if args.dry_run else "updated"
-    print(f"{len(PAGES)} page(s) from {REPO}: "
+    print(f"{len(PAGES) + 1} page(s) from {REPO}: "
           f"{f'{verb} {len(changed)}' if changed else 'already up to date'}"
           f"{' (' + ', '.join(changed) + ')' if changed else ''}")
     return 0
