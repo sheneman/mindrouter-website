@@ -183,13 +183,14 @@ html {
 }
 
 .site-footer .uidaho-logo {
-    height: 38px;
+    height: 28px;
     width: auto;
 }
 
 [data-bs-theme="dark"] .site-footer .uidaho-logo {
-    /* The asset is dark-on-transparent; flip lightness but keep the gold I gold */
-    filter: invert(1) hue-rotate(180deg);
+    /* Recolored copy with light text; the primary asset's near-black wordmark
+       has no contrast against the dark footer */
+    content: url("/img/uidaho-logo-dark.png");
 }
 
 /* Accessibility */
