@@ -78,7 +78,7 @@
 <h2>Setting It Up: Three Environment Variables and Go</h2>
 <p>The elegance of this setup is in its simplicity. Claude Code respects a small set of environment variables that redirect its API calls. To point it at MindRouter, you need just a few lines in your shell profile:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Point Claude Code at MindRouter&#39;s Anthropic-compatible endpoint</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_BASE_URL</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.uidaho.edu/anthropic&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_BASE_URL</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/anthropic&quot;</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_AUTH_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-mindrouter-api-key&quot;</span>
 
 <span class="c1"># Tell Claude Code which model to use</span>
@@ -95,7 +95,7 @@
 <p>Or, if you prefer to keep your shell clean, drop the configuration into <code>~/.claude/settings.json</code>:</p>
 <div class="codehilite"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;env&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;ANTHROPIC_BASE_URL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://mindrouter.uidaho.edu/anthropic&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;ANTHROPIC_BASE_URL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://mindrouter.example.com/anthropic&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;ANTHROPIC_AUTH_TOKEN&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your-mindrouter-api-key&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;ANTHROPIC_MODEL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;qwen/qwen3.5-122b&quot;</span>
 <span class="w">  </span><span class="p">}</span>
@@ -128,7 +128,7 @@ behavior identical.&quot;
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
 
 <span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span>
-    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.uidaho.edu/v1&quot;</span><span class="p">,</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://mindrouter.example.com/v1&quot;</span><span class="p">,</span>
     <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-mindrouter-api-key&quot;</span>
 <span class="p">)</span>
 
@@ -143,19 +143,19 @@ behavior identical.&quot;
 <h2>Getting Started</h2>
 <p>If you're at the University of Idaho, getting started takes about five minutes:</p>
 <ol>
-<li><strong>Log in</strong> to <a href="https://mindrouter.uidaho.edu">mindrouter.uidaho.edu</a> with your university credentials.</li>
+<li><strong>Log in</strong> to <a href="https://mindrouter.example.com">mindrouter.example.com</a> with your university credentials.</li>
 <li><strong>Generate an API key</strong> from the dashboard.</li>
 <li><strong>Set your environment variables</strong> as shown above.</li>
 <li><strong>Install Claude Code</strong> (<code>npm install -g @anthropic-ai/claude-code</code>) if you haven't already.</li>
 <li><strong>Run <code>claude</code></strong> in any project directory and start working.</li>
 </ol>
-<p>The MindRouter documentation at <a href="https://mindrouter.uidaho.edu/documentation">mindrouter.uidaho.edu/documentation</a> covers advanced topics like rate limits, model selection, and integration with other frameworks.</p>
+<p>The MindRouter documentation at <a href="https://mindrouter.example.com/documentation">mindrouter.example.com/documentation</a> covers advanced topics like rate limits, model selection, and integration with other frameworks.</p>
 <h2>The Bigger Picture</h2>
 <p>There's a broader point here that goes beyond any single tool. Universities have always been places where powerful computing infrastructure is shared as a commons — from the mainframe era through HPC clusters to cloud credits programs. MindRouter extends that tradition to AI inference. It takes the most capable open-weight models available, runs them on institutional hardware, and makes them accessible through the same APIs that the commercial world uses.</p>
 <p>The combination of agentic tooling like Claude Code with local inference infrastructure like MindRouter is, in a word, liberating. It means a graduate student with a good idea and a terminal can wield the same caliber of AI-assisted development that a well-funded startup takes for granted — without the bill, without the compliance headaches, and without sending their work into someone else's cloud.</p>
 <p>The GPUs are already here. The models are already running. The environment variables take thirty seconds to set. The only question left is what you'll build.</p>
 <hr />
-<p><em>MindRouter is developed and maintained at the University of Idaho with support from the National Science Foundation. For questions, access requests, or to learn more, visit <a href="https://mindrouter.uidaho.edu">mindrouter.uidaho.edu</a>.</em></p>
+<p><em>MindRouter is developed and maintained at the University of Idaho with support from the National Science Foundation. For questions, access requests, or to learn more, visit <a href="https://mindrouter.example.com">mindrouter.example.com</a>.</em></p>
                     </article>
                     <hr class="my-5">
                     <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">

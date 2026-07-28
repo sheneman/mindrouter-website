@@ -82,7 +82,7 @@
 <p><strong>1. Searches are powered by Brave.</strong> By default, MindRouter's search endpoint forwards your query to the <a href="https://brave.com/search/api">Brave Search API</a>. Brave is fast, high-quality, and privacy-respecting, but it <em>is</em> a third-party cloud service. The text of every search query you submit will leave the University of Idaho's MindRouter instance and travel to Brave's servers for processing. If you wouldn't paste a query into google.com, don't paste it into MindRouter search either. (Self-hosted SearXNG is also supported as an alternative provider.)</p>
 <p><strong>2. Every search is metered.</strong> Each call to the search endpoint deducts a fixed number of tokens (default: <strong>50 tokens</strong>) from the quota tied to your MindRouter API key. Every search costs the same flat amount in tokens, and it's tracked alongside your normal inference usage in the dashboard. Admins can tune that number, and they can even set it to zero. But the rule is the same: <strong>searches are linked to your API key.</strong></p>
 <p><strong>3. Every search is logged.</strong> All MindRouter interactions are logged and archived on our servers, including web search queries.  This is useful from a cybersecurity perspective and to help us improve your user experience.</p>
-<p><strong>4. You'll need an API key.</strong> Hop over to <a href="https://mindrouter.uidaho.edu/dashboard">mindrouter.uidaho.edu/dashboard</a>, generate a key (it'll start with <code>mr2_</code>), and stash it somewhere safe. Every method below uses the same key.</p>
+<p><strong>4. You'll need an API key.</strong> Hop over to <a href="https://mindrouter.example.com/dashboard">mindrouter.example.com/dashboard</a>, generate a key (it'll start with <code>mr2_</code>), and stash it somewhere safe. Every method below uses the same key.</p>
 <p><br> </p>
 <div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 100%;">
   <img src="/blog/images/2026/04/29/3b89/3b89c4e088734c1dd7844e28b9efb77963885b52c0055bcc64e00e5587fd062d_ef989954.png" alt="dee.png" style="width: 100%; height: auto;">
@@ -94,7 +94,7 @@
 <h2>Method 1: The Chat Toggle</h2>
 <h4>(zero code, one click)</h4>
 <p><br></p>
-<p>If all you want is for MindRouter's built-in chat to ground its answers in fresh web results, you don't need to write a thing. Open the chat at <code>mindrouter.uidaho.edu/chat</code>, look at the input area, and tap the little magnifying-glass button on the left side. Gray means off; solid blue means on.</p>
+<p>If all you want is for MindRouter's built-in chat to ground its answers in fresh web results, you don't need to write a thing. Open the chat at <code>mindrouter.example.com/chat</code>, look at the input area, and tap the little magnifying-glass button on the left side. Gray means off; solid blue means on.</p>
 <p><br></p>
 <div style="text-align: center; margin-left: auto; margin-right: auto; max-width: 75%;">
   <img src="/blog/images/2026/04/29/12f1/12f10720e86f42bf9edb40b695673c74b35d0afa6fe31f3edec46daf627bd506_1b52902b.png" alt="chee.png" style="width: 100%; height: auto;">
@@ -121,7 +121,7 @@
 <h3>Wiring in the MCP Server</h3>
 <p>You will need to register the MindRouter MCP server with your agentic tools.   With Claude Code, you can do this with a simple command from the CLI:</p>
 <p><br></p>
-<div class="codehilite"><pre><span></span><code>claude mcp add mindrouter https://mindrouter.uidaho.edu/mcp/sse \
+<div class="codehilite"><pre><span></span><code>claude mcp add mindrouter https://mindrouter.example.com/mcp/sse \
   --transport sse \
   -H &quot;Authorization: Bearer mr2_your_key_here&quot;
 </code></pre></div>
@@ -129,7 +129,7 @@
 <p><br></p>
 <p><strong>That's it!</strong>  Now you can check that it is successfully registered and connected:</p>
 <div class="codehilite"><pre><span></span><code>$ claude mcp list
-mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
+mindrouter: https://mindrouter.example.com/mcp/sse (SSE) - ✓ Connected
 </code></pre></div>
 
 <p><br></p>
@@ -138,7 +138,7 @@ mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
 <span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;mindrouter&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sse&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://mindrouter.uidaho.edu/mcp/sse&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://mindrouter.example.com/mcp/sse&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;Authorization&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bearer mr2_your_key_here&quot;</span>
 <span class="w">      </span><span class="p">}</span>
@@ -184,13 +184,13 @@ mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
 <h4>(curl, Python, anything that speaks HTTP)</h4>
 <p><br></p>
 <p>Everything below this line is fundamentally just a wrapper around the same HTTP endpoint:</p>
-<div class="codehilite"><pre><span></span><code>POST https://mindrouter.uidaho.edu/v1/search
+<div class="codehilite"><pre><span></span><code>POST https://mindrouter.example.com/v1/search
 </code></pre></div>
 
 <p><br></p>
 <p>If you can make an HTTP request, you can use MindRouter search. Here's the smallest possible example.</p>
 <h3>A search in one line of curl</h3>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/search<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/search<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;query&quot;: &quot;What is the current weather in Moscow, Idaho&quot;, &quot;max_results&quot;: 5}&#39;</span>
@@ -214,7 +214,7 @@ mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">requests</span>
 
 <span class="n">API_KEY</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MINDROUTER_API_KEY&quot;</span><span class="p">]</span>
-<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.uidaho.edu&quot;</span>
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.example.com&quot;</span>
 
 <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BASE_URL</span><span class="si">}</span><span class="s2">/v1/search&quot;</span><span class="p">,</span>
@@ -267,7 +267,7 @@ mindrouter: https://mindrouter.uidaho.edu/mcp/sse (SSE) - ✓ Connected
 <h4>(Markdown that teaches your agent to search)</h4>
 <p>The MindRouter MCP server will address most agentic use, but <strong>Agent Skills</strong> represent an alternative approach worth mentioning.</p>
 <p>Most of the modern coding agents — Claude Code, ForgeCode, OpenCode, Codex, and friends — support <strong>skills</strong>: little Markdown files that drop into a <code>.claude/skills/</code> (or equivalent) directory and teach the agent how to do a specific task. You can think of a skill as a tiny instruction manual the agent reads on demand.</p>
-<p>Further, agentic harnesses like Claude Code or Cowork, ForgeCode, or OpenCode can be configured to point to MindRouter.   We covered Claude Code configuration in this <A HREF="https://mindrouter.uidaho.edu/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter">previous blog post</A>.</p>
+<p>Further, agentic harnesses like Claude Code or Cowork, ForgeCode, or OpenCode can be configured to point to MindRouter.   We covered Claude Code configuration in this <A HREF="/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/">previous blog post</A>.</p>
 <p>We ship a <code>web-search</code> skill as part of the <A HREF="https://github.com/ui-insight/MindRouter">MindRouter GitHub Repository</A>. It looks like this:</p>
 <div class="codehilite"><pre><span></span><code>agentic_ai/
 └── skills/
@@ -288,7 +288,7 @@ cp<span class="w"> </span>-r<span class="w"> </span>agentic_ai/skills/web-search
 <p><br></p>
 <h2>Or, let Claude Code do the work for you:</h2>
 <p><br></p>
-<div class="codehilite"><pre><span></span><code>$ export ANTHROPIC_BASE_URL=&quot;https://mindrouter.uidaho.edu/anthropic&quot;
+<div class="codehilite"><pre><span></span><code>$ export ANTHROPIC_BASE_URL=&quot;https://mindrouter.example.com/anthropic&quot;
 $ export ANTHROPIC_AUTH_TOKEN=&quot;&lt;YOUR_MINDROUTER_API_KEY&gt;&quot;
 $ export ANTHROPIC_MODEL=&quot;qwen/qwen3.6-27b&quot;
 $ export ANTHROPIC_DEFAULT_SONNET_MODEL=&quot;openai/gpt-oss-120b&quot;
@@ -361,7 +361,7 @@ To enable it, you need to set your MindRouter API key:
 
 export MINDROUTER_API_KEY=mr2_your_key_here
 
-You can get one from the MindRouter dashboard (https://mindrouter.uidaho.edu/dashboard/api-keys).
+You can get one from the MindRouter dashboard (https://mindrouter.example.com/dashboard/api-keys).
 Once the key is set, I&#39;ll use the web-search skill automatically whenever I need to search the web — it calls POST /v1/search against the MindRouter API, which routes through Brave Search or SearXNG and returns structured results with titles, URLs, snippets, and published dates.
 </code></pre></div>
 
@@ -387,8 +387,8 @@ Once the key is set, I&#39;ll use the web-search skill automatically whenever I 
 <hr />
 <h3>Further reading</h3>
 <ul>
-<li><strong>MindRouter Documentation:</strong> <a href="https://mindrouter.uidaho.edu/documentation#web-search">MindRouter Web Search Documentation</a></li>
-<li><strong>API key management:</strong> <a href="https://mindrouter.uidaho.edu/dashboard/api-keys">mindrouter.uidaho.edu/dashboard/api-keys</a></li>
+<li><strong>MindRouter Documentation:</strong> <a href="https://mindrouter.example.com/documentation#web-search">MindRouter Web Search Documentation</a></li>
+<li><strong>API key management:</strong> <a href="https://mindrouter.example.com/dashboard/api-keys">mindrouter.example.com/dashboard/api-keys</a></li>
 <li><strong>Brave Search API (provider docs):</strong> <a href="https://brave.com/search/api">brave.com/search/api</a></li>
 <li><strong>Model Context Protocol:</strong> <a href="https://modelcontextprotocol.io">modelcontextprotocol.io</a></li>
 <li><strong>The skill and MCP server source:</strong> look in <code>agentic_ai/skills/web-search/</code> and <code>agentic_ai/mcp/search/</code> in the <A HREF="https://github.com/ui-insight/mindrouter">MindRouter GitHub Repository</A>.</li>

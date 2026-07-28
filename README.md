@@ -76,6 +76,12 @@ python tools/sync_blog.py                    # write the changes
 git add -A blog && git commit -m 'blog: sync from MindRouter syndication feed' && git push
 ```
 
+Posts are rewritten on the way through, the same way the documentation is: gateway image
+URLs point at the rehosted copies under `blog/images/`, links to other syndicated posts
+become site-relative, and `*.uidaho.edu` hostnames become `example.com` placeholders.
+Email addresses (`mindrouter@uidaho.edu`) are left alone — the rule only matches
+hostnames.
+
 Add `--allow-empty-feed` only if the feed legitimately returns zero posts — the script
 otherwise refuses to delete every local post, since an empty feed is indistinguishable
 from an upstream fault.

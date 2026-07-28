@@ -177,7 +177,7 @@
 <h3>Five Output Formats for Different Workflows</h3>
 <p>One of the most useful features of the STT endpoint is its support for five distinct output formats, each tailored to a different workflow. You choose the format via the <code>response_format</code> parameter.</p>
 <h4>1. JSON (default)</h4>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=json&quot;</span>
@@ -191,7 +191,7 @@
 <p><br></p>
 <p><strong>When to use it:</strong> Programmatic pipelines, data processing scripts, any context where you need to parse the result as structured data. This is the default if you do not specify a format.</p>
 <h4>2. Plain Text</h4>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=text&quot;</span>
@@ -206,7 +206,7 @@
 <p><strong>When to use it:</strong> Note-taking, quick dictation, generating documents from spoken input. The output is plain text with no markup, metadata, or timestamps. Pipe it directly into a file and you have a usable document.</p>
 <p><br></p>
 <h4>3. Verbose JSON</h4>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=verbose_json&quot;</span>
@@ -249,7 +249,7 @@
 <p><strong>When to use it:</strong> Research analysis where you need time-aligned annotation. Each segment includes start and end timestamps (in seconds), confidence metrics (<code>avg_logprob</code>, <code>no_speech_prob</code>), and token-level detail. This is invaluable for qualitative coding, conversational analysis, or any work where you need to map transcript passages back to specific moments in the recording.</p>
 <p><br></p>
 <h4>4. SRT (SubRip Subtitles)</h4>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@lecture.mp4&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=srt&quot;</span>
@@ -270,7 +270,7 @@ the first thing we noticed was...
 <p><strong>When to use it:</strong> Adding subtitles to video. SRT is the most widely supported subtitle format. Import it into video editors (Premiere Pro, DaVinci Resolve, iMovie), media players (VLC), or video hosting platforms (YouTube, Vimeo) to add captions to lectures, presentations, or research video.</p>
 <p><br></p>
 <h4>5. VTT (WebVTT)</h4>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@lecture.mp4&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;response_format=vtt&quot;</span>
@@ -399,7 +399,7 @@ the first thing we noticed was...
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
 <span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-    <span class="s2">&quot;https://mindrouter.uidaho.edu/v1/audio/speech&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;https://mindrouter.example.com/v1/audio/speech&quot;</span><span class="p">,</span>
     <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer mr2_your-api-key&quot;</span><span class="p">},</span>
     <span class="n">json</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;kokoro&quot;</span><span class="p">,</span>
@@ -418,7 +418,7 @@ the first thing we noticed was...
 <p><br></p>
 <h3>Voices and Formats</h3>
 <p>Kokoro ships with 54 voices spanning multiple languages and styles. The MindRouter administrator configures which voices are available. You can query the available voices programmatically:</p>
-<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>https://mindrouter.uidaho.edu/api/tts-voices<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>https://mindrouter.example.com/api/tts-voices<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span>
 </code></pre></div>
 
@@ -440,7 +440,7 @@ the first thing we noticed was...
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
 <span class="n">API_KEY</span> <span class="o">=</span> <span class="s2">&quot;mr2_your-api-key&quot;</span>
-<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.uidaho.edu&quot;</span>
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://mindrouter.example.com&quot;</span>
 
 <span class="n">audio</span> <span class="o">=</span> <span class="n">AudioSegment</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;lecture.mp3&quot;</span><span class="p">)</span>
 <span class="n">chunk_ms</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">1000</span>  <span class="c1"># 5-minute chunks</span>
@@ -470,7 +470,7 @@ ffmpeg<span class="w"> </span>-i<span class="w"> </span>lecture.mp3<span class="
 
 <span class="c1"># Transcribe each chunk</span>
 <span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span>chunk_*.mp3<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<span class="w">  </span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-F<span class="w"> </span><span class="s2">&quot;file=@</span><span class="nv">$f</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-F<span class="w"> </span><span class="s2">&quot;response_format=text&quot;</span>
@@ -484,13 +484,13 @@ ffmpeg<span class="w"> </span>-i<span class="w"> </span>lecture.mp3<span class="
 <h2>Multi-Language Support</h2>
 <p>Whisper supports 99 languages. Providing a language hint via the <code>language</code> parameter improves both accuracy and speed, especially for non-English audio or audio with accented speech.</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># French interview</span>
-curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@interview_fr.mp3&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;language=fr&quot;</span>
 
 <span class="c1"># Spanish focus group</span>
-curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.uidaho.edu/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
+curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://mindrouter.example.com/v1/audio/transcriptions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$MINDROUTER_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@focus_group_es.m4a&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;language=es&quot;</span>
@@ -558,7 +558,7 @@ python<span class="w"> </span>stt_batch.py<span class="w"> </span>/path/to/recor
 <hr />
 <p><br></p>
 <h2>Getting Started</h2>
-<p><strong>1. Get an API key.</strong> Log in to the <a href="https://mindrouter.uidaho.edu/dashboard">MindRouter dashboard</a> and create an API key from the API Keys page.</p>
+<p><strong>1. Get an API key.</strong> Log in to the <a href="https://mindrouter.example.com/dashboard">MindRouter dashboard</a> and create an API key from the API Keys page.</p>
 <p><strong>2. Clone the examples.</strong>
    <code>bash
    git clone https://github.com/sheneman/mindrouter_voice.git

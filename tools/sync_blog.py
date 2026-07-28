@@ -512,6 +512,35 @@ def localize_image_urls(body_html: str, images: list[dict], base_url: str) -> st
     return body_html
 
 
+# Deployment-specific hostnames do not belong on a product site. tools/
+# build_docs.py applies the same rule to the documentation pages. An email
+# address such as mindrouter@uidaho.edu has no label before uidaho.edu, so it
+# is left alone.
+UIDAHO_HOST = re.compile(r"\b([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)\.uidaho\.edu\b")
+
+
+def localize_post_links(body_html: str, slugs: set[str], base_url: str) -> str:
+    """Point gateway links to posts we also host at our own copy.
+
+    Matched on the URL rather than an href attribute: post markdown contains
+    hand-written anchors, including upper-case <A HREF="...">.
+    """
+    prefix = re.escape(f"{base_url.rstrip('/')}/blog/")
+    for slug in slugs:
+        body_html = re.sub(f"{prefix}{re.escape(slug)}/?", f"/blog/{slug}/", body_html)
+    return body_html
+
+
+def rewrite_domains(body_html: str, report: list[str]) -> str:
+    """Rewrite uidaho.edu hostnames to example.com placeholders."""
+    def swap(match: re.Match) -> str:
+        replacement = f"{match.group(1).split('.')[0]}.example.com"
+        report.append(f"{match.group(0)} -> {replacement}")
+        return replacement
+
+    return UIDAHO_HOST.sub(swap, body_html)
+
+
 def prune_posts(blog_dir: Path, keep: set[str], tree: Tree) -> None:
     for child in sorted(blog_dir.iterdir()):
         if child.is_dir() and child.name != "images" and child.name not in keep:
@@ -553,9 +582,20 @@ def sync(feed: dict, root: Path, renderer: str, tree: Tree, allow_empty: bool) -
     for post in posts:
         post["_images"] = sync_images(post, images_dir, tree, base_url)
 
+    slugs = {p["slug"] for p in posts}
+    domain_report: list[str] = []
+    for post in posts:
+        for field in ("title", "description"):
+            if isinstance(post.get(field), str):
+                post[field] = rewrite_domains(post[field], domain_report)
+
     for index, post in enumerate(posts):
         body = post_content_html(post, renderer)
+        # Order matters: image and cross-post URLs are matched against the
+        # gateway hostname, so localize them before it is rewritten away.
         body = localize_image_urls(body, post["_images"], base_url)
+        body = localize_post_links(body, slugs, base_url)
+        body = rewrite_domains(body, domain_report)
         page = render_post_page(post, body,
                                 posts[index - 1] if index > 0 else None,
                                 posts[index + 1] if index + 1 < len(posts) else None)
@@ -566,6 +606,11 @@ def sync(feed: dict, root: Path, renderer: str, tree: Tree, allow_empty: bool) -
 
     tree.write(blog_dir / "index.html", render_index_page(posts))
     tree.write(blog_dir / "feed.xml", render_feed_xml(posts))
+
+    if domain_report and tree.verbose:
+        print("  domain rewrites:")
+        for entry in sorted(set(domain_report)):
+            print(f"    {entry} ({domain_report.count(entry)}x)")
 
 
 def main() -> int:
