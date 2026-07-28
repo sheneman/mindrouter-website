@@ -182,6 +182,16 @@ html {
     border-top-color: #21262d;
 }
 
+.site-footer .uidaho-logo {
+    height: 38px;
+    width: auto;
+}
+
+[data-bs-theme="dark"] .site-footer .uidaho-logo {
+    /* The asset is dark-on-transparent; flip lightness but keep the gold I gold */
+    filter: invert(1) hue-rotate(180deg);
+}
+
 /* Accessibility */
 .sr-only {
     position: absolute;
