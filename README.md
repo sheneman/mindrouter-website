@@ -62,6 +62,27 @@ against unchanged upstream docs leaves the git tree clean.
 Add a page by appending to `PAGES` in the script. `--source DIR` renders from a local
 MindRouter checkout instead of GitHub.
 
+## Navigation
+
+The navbar is defined once, in **`tools/site_nav.py`**, because five surfaces carry it and
+they had drifted apart (the docs pages were down to four items; the configurator was
+missing Cite; Docs pointed at the homepage teaser on some pages and the real docs on
+others). Every href is absolute so the same markup works at any depth.
+
+- Generated pages import it: `tools/build_docs.py` and `tools/sync_blog.py`.
+- Hand-written pages (`index.html`, `configurator.html`) are updated by
+  **`python tools/sync_nav.py`**.
+
+After changing `NAV_ITEMS`, run all three so the site stays in step:
+
+```bash
+python tools/sync_nav.py && python tools/build_docs.py && python tools/sync_blog.py
+```
+
+On the home page, `js/main.js` intercepts the absolute section links (`/#features`) so
+they smooth-scroll instead of reloading; elsewhere they navigate home and jump to the
+section.
+
 ## Blog (pull syndication)
 
 Everything under `blog/` is **generated** — never hand-edit it. The MindRouter gateway

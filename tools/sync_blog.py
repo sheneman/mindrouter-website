@@ -30,6 +30,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from site_nav import nav_html
+
 FEED_URL = "https://mindrouter.uidaho.edu/api/blog/syndicated"
 SITE_URL = "https://mindrouter.ai"
 BLOG_TAGLINE = "Updates, tutorials, and best practices from the MindRouter team."
@@ -140,44 +142,6 @@ def esc(value) -> str:
     return html.escape(value if isinstance(value, str) else "", quote=True)
 
 
-NAV_ITEMS = [
-    ("/#features", "Features", ""),
-    ("/#telemetry", "Telemetry", ""),
-    ("/configurator.html", "Configurator", '<i class="bi bi-sliders"></i> '),
-    ("/#docs", "Docs", ""),
-    ("/blog/", "Blog", ""),
-    ("/#cite", "Cite", ""),
-    ("https://github.com/ui-insight/MindRouter", "GitHub", '<i class="bi bi-github"></i> '),
-    ("/#contact", "Contact", ""),
-]
-
-
-def nav_html() -> str:
-    items = []
-    for href, label, icon in NAV_ITEMS:
-        cls = "nav-link active" if href == "/blog/" else "nav-link"
-        target = ' target="_blank"' if href.startswith("http") else ""
-        items.append(f'                    <li class="nav-item"><a class="{cls}" href="{href}"{target}>{icon}{label}</a></li>')
-    return """    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
-        <div class="container">
-            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-""" + "\n".join(items) + """
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>"""
-
-
 FOOTER_HTML = """    <footer class="site-footer py-4 mt-5">
         <div class="container text-center">
             <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
@@ -256,7 +220,7 @@ def page_head(title: str, description: str, canonical: str, og_type: str,
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-{nav_html()}
+{nav_html("blog")}
 """
 
 

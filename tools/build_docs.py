@@ -35,6 +35,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from site_nav import nav_html
+
 REPO = "ui-insight/MindRouter"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO}/main"
 BLOB_BASE = f"https://github.com/{REPO}/blob/main"
@@ -302,40 +304,6 @@ def decorate(html_text: str) -> str:
     return re.sub(r"<blockquote>(.*?)</blockquote>", callout, html_text, flags=re.DOTALL)
 
 
-NAV_HTML = """    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-router"></i> MindRouter
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/blog/">Blog</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
-                            <i class="bi bi-sun-fill"></i>
-                        </button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>"""
-
 FOOTER_HTML = """    <footer class="site-footer py-4">
         <div class="container text-center">
             <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
@@ -558,7 +526,7 @@ def build_template_page(page: dict, template: str, supplement_md: str = "",
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-{NAV_HTML}
+{nav_html("docs", container="container-fluid")}
     <main id="main-content">
 {content}
     </main>
@@ -639,7 +607,7 @@ def build_page(page: dict, markdown_text: str, verbose: bool = False) -> str:
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-{NAV_HTML}
+{nav_html("docs", container="container-fluid")}
     <main id="main-content">
 <div class="container-fluid py-0">
     <div class="row">

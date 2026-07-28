@@ -62,10 +62,16 @@
     });
 
     // Smooth scroll for nav links (skip Bootstrap toggles and the skip link,
-    // which need their default behavior)
-    document.querySelectorAll('a[href^="#"]:not([data-bs-toggle]):not(.skip-link)').forEach(function(link) {
+    // which need their default behavior). The navbar is shared across the site,
+    // so its section links are absolute ("/#features"); on the home page they
+    // point at sections of this page and should scroll rather than navigate.
+    var onHome = location.pathname === '/' || location.pathname.endsWith('/index.html');
+    var anchorLinks = 'a[href^="#"]:not([data-bs-toggle]):not(.skip-link)' +
+                      (onHome ? ', a[href^="/#"]:not([data-bs-toggle])' : '');
+    document.querySelectorAll(anchorLinks).forEach(function(link) {
         link.addEventListener('click', function(e) {
-            var target = document.querySelector(this.getAttribute('href'));
+            var hash = this.getAttribute('href').replace(/^\//, '');
+            var target = hash.length > 1 ? document.querySelector(hash) : null;
             if (target) {
                 e.preventDefault();
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -88,7 +94,8 @@
                 var top = section.offsetTop;
                 var height = section.offsetHeight;
                 var id = section.getAttribute('id');
-                var link = document.querySelector('.navbar-nav a[href="#' + id + '"]');
+                var link = document.querySelector('.navbar-nav a[href="#' + id + '"], ' +
+                                                  '.navbar-nav a[href="/#' + id + '"]');
                 if (link) {
                     if (scrollY >= top && scrollY < top + height) {
                         link.classList.add('active');
