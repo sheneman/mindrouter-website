@@ -68,7 +68,7 @@
 <p><br></p>
 <H3>MindRouter Transcription and Voice</H3>
 
-<p>If you have ever recorded an interview, a lecture, a focus group, or a field observation and then spent hours manually transcribing it, this post is for you. MindRouter now provides a full-featured speech-to-text (STT) dictation service alongside text-to-speech (TTS) capabilities, all running on dedicated GPUs at the University of Idaho. No cloud providers. No third-party data sharing. No ambiguity about where your audio goes.</p>
+<p>If you have ever recorded an interview, a lecture, a focus group, or a field observation and then spent hours manually transcribing it, this post is for you. MindRouter now provides a full-featured speech-to-text (STT) dictation service alongside text-to-speech (TTS) capabilities, all running on dedicated on-premises GPUs. No cloud providers. No third-party data sharing. No ambiguity about where your audio goes.</p>
 <p>This post focuses primarily on the STT side of MindRouter's Voice API, because that is where the real impact lies for researchers, students, and staff. We will walk through what the service can do, which audio and video formats it accepts, how the different output formats work, and why keeping transcription on-premises matters, especially when your recordings contain human subjects data.</p>
 <p>We will also cover the TTS capabilities, the specific models powering everything, and point you to a <a href="https://github.com/sheneman/mindrouter_voice">public repository of working code examples</a> that you can use right away.</p>
 <hr />
@@ -103,7 +103,7 @@
 <p><br></p>
 <p>On the text-to-speech side, MindRouter uses <a href="https://huggingface.co/hexgrad/Kokoro-82M"><strong>Kokoro-82M</strong></a>, an open-weight TTS model. Despite having only 82 million parameters (a fraction of the size of models like XTTS or MetaVoice), Kokoro reached the number one spot on the Hugging Face TTS Arena leaderboard. It achieves a mean opinion score (MOS) of roughly 4.5 out of 5, which puts it in the range of near-human speech quality.</p>
 <p>Kokoro is built on the <a href="https://arxiv.org/pdf/2306.07691">StyleTTS 2 architecture</a> with an <a href="https://arxiv.org/pdf/2203.02395">ISTFTNet vocoder</a>. It supports 8 languages (American English, British English, Chinese, Japanese, Spanish, French, Hindi, Italian, and Brazilian Portuguese) and ships with 54 built-in voices. It is licensed under Apache 2.0.</p>
-<p>Both models run on dedicated NVIDIA A5000 GPUs within the University of Idaho's on-premises MindRouter Artificial Intelligence GPU cluster. </p>
+<p>Both models run on dedicated NVIDIA A5000 GPUs within an on-premises MindRouter Artificial Intelligence GPU cluster. </p>
 <p><strong>Audio data is processed locally and never transmitted to any external service.</strong></p>
 <hr />
 <h2>Speech-to-Text (STT): A General-Purpose Dictation Service</h2>
@@ -368,7 +368,7 @@ the first thing we noticed was...
 <p>MindRouter's STT service addresses these concerns structurally, not just through policy:</p>
 <ul>
 <li>
-<p><strong>Audio never leaves university-controlled hardware.</strong> The Whisper model runs on NVIDIA GPUs in the University of Idaho's on-premises cluster. Your recording goes from your machine to the campus network to the GPU and back. It does not traverse any third-party infrastructure.</p>
+<p><strong>Audio never leaves university-controlled hardware.</strong> The Whisper model runs on NVIDIA GPUs in the institution's on-premises cluster. Your recording goes from your machine to the campus network to the GPU and back. It does not traverse any third-party infrastructure.</p>
 </li>
 <li>
 <p><strong>No third-party data processor.</strong> An on-premises deployment may eliminate or substantially reduce the need for external vendor agreements such as DUAs or BAAs because data remains within institutionally managed infrastructure.</p>
@@ -593,7 +593,7 @@ python<span class="w"> </span>stt_batch.py<span class="w"> </span>/path/to/recor
 <p><br></p>
 <hr />
 <p><br></p>
-<p><em>MindRouter is developed by the Research Computing and Data Services (RCDS) group at the Institute for Interdisciplinary Data Sciences (IIDS), University of Idaho. The Voice API is available to all University of Idaho users with a MindRouter account.</em></p>
+<p><em>MindRouter is developed by the Research Computing and Data Services (RCDS) group at the Institute for Interdisciplinary Data Sciences (IIDS), University of Idaho. The Voice API is available to all users with a MindRouter account.</em></p>
                     </article>
                     <hr class="my-5">
                     <nav class="d-flex justify-content-between gap-4" aria-label="Post navigation">

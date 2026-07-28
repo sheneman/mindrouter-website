@@ -518,6 +518,67 @@ def localize_image_urls(body_html: str, images: list[dict], base_url: str) -> st
 # is left alone.
 UIDAHO_HOST = re.compile(r"\b([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)\.uidaho\.edu\b")
 
+# Posts are written for the University of Idaho deployment and syndicated to a
+# product site that serves every deployment. These substitutions neutralise the
+# passages where the institution is incidental — instructions addressed to
+# campus readers, and technical facts that happen to name the operator.
+#
+# Deliberately NOT rewritten: authorship and funding credits (they are accurate
+# and match the site footer), citations of other institutions' deployments, and
+# "on-campus"/"on-premises" phrasing that names no one in particular.
+#
+# Each pattern is an exact substring of the upstream markdown. When upstream
+# edits one of these sentences the substitution stops matching, and the sync
+# warns instead of silently letting the original wording through.
+PROSE_REWRITES: dict[str, list[tuple[str, str]]] = {
+    "agentic-ai-on-campus-powering-claude-code-with-mindrouter": [
+        ("How the University of Idaho runs autonomous coding agents",
+         "How we run autonomous coding agents"),
+        ("At the University of Idaho, that backend is",
+         "In our case, that backend is"),
+        ("MindRouter is the University of Idaho's institutional LLM inference platform.",
+         "MindRouter is an institutional LLM inference platform."),
+        ("MindRouter at the University of Idaho has not yet been approved",
+         "Our MindRouter deployment has not yet been approved"),
+        ("If you're at the University of Idaho, getting started takes about five minutes:",
+         "Getting started takes about five minutes:"),
+    ],
+    "from-audio-to-text-secure-on-campus-dictation-and-transcription-with-mindrouter": [
+        ("all running on dedicated GPUs at the University of Idaho.",
+         "all running on dedicated on-premises GPUs."),
+        ("within the University of Idaho's on-premises MindRouter Artificial Intelligence GPU cluster.",
+         "within an on-premises MindRouter Artificial Intelligence GPU cluster."),
+        ("The Whisper model runs on NVIDIA GPUs in the University of Idaho's on-premises cluster.",
+         "The Whisper model runs on NVIDIA GPUs in the institution's on-premises cluster."),
+        ("The Voice API is available to all University of Idaho users with a MindRouter account.",
+         "The Voice API is available to all users with a MindRouter account."),
+    ],
+    "bring-your-own-search-giving-your-llms-and-agents-a-window-to-the-live-web": [
+        ("will leave the University of Idaho's MindRouter instance",
+         "will leave your MindRouter instance"),
+    ],
+    "the-almost-free-lunch-how-speculative-decoding-doubles-our-ai-throughput": [
+        ("The MindRouter cluster serves the entire University of Idaho community.",
+         "The MindRouter cluster serves our entire user community."),
+    ],
+}
+
+# Fields carrying prose that reaches a reader.
+PROSE_FIELDS = ("title", "description", "content_markdown", "content_html")
+
+# Institution references that are meant to survive: authorship and funding
+# credits, and the support address. Anything else that mentions the operator is
+# flagged after rendering — that check is on the result rather than on the
+# substitutions, so it still fires when upstream rewords a passage and a
+# PROSE_REWRITES entry silently stops matching.
+INSTITUTION_RE = re.compile(r"University of Idaho|\bU of I\b|uidaho", re.IGNORECASE)
+INSTITUTION_KEEP = (
+    "Research Computing and Data Services",
+    "developed and maintained at the University of Idaho with support from the "
+    "National Science Foundation",
+    "mindrouter@uidaho.edu",
+)
+
 
 def localize_post_links(body_html: str, slugs: set[str], base_url: str) -> str:
     """Point gateway links to posts we also host at our own copy.
@@ -529,6 +590,44 @@ def localize_post_links(body_html: str, slugs: set[str], base_url: str) -> str:
     for slug in slugs:
         body_html = re.sub(f"{prefix}{re.escape(slug)}/?", f"/blog/{slug}/", body_html)
     return body_html
+
+
+def rewrite_prose(post: dict) -> int:
+    """Neutralise institution-specific wording in a post, in place.
+
+    Returns the number of substitutions applied. A configured substitution that
+    matches nothing is reported: upstream has reworded that passage, and the
+    original phrasing may now be reaching the site unchanged.
+    """
+    applied = 0
+    for original, replacement in PROSE_REWRITES.get(post["slug"], []):
+        hit = False
+        for field in PROSE_FIELDS:
+            value = post.get(field)
+            if isinstance(value, str) and original in value:
+                post[field] = value.replace(original, replacement)
+                hit = True
+        if hit:
+            applied += 1
+        else:
+            print(f"warning: {post['slug']}: no longer matches {original!r} — check "
+                  f"whether the upstream wording still needs neutralising",
+                  file=sys.stderr)
+    return applied
+
+
+def lint_institution(body_html: str, slug: str) -> int:
+    """Warn about institution references left in a rendered post body."""
+    found = 0
+    for match in INSTITUTION_RE.finditer(body_html):
+        window = body_html[max(0, match.start() - 200):match.end() + 200]
+        if any(keep in window for keep in INSTITUTION_KEEP):
+            continue
+        found += 1
+        context = re.sub(r"\s+", " ", body_html[max(0, match.start() - 60):match.end() + 60])
+        print(f"warning: {slug}: institution reference survived rendering: …{context.strip()}…",
+              file=sys.stderr)
+    return found
 
 
 def rewrite_domains(body_html: str, report: list[str]) -> str:
@@ -584,7 +683,9 @@ def sync(feed: dict, root: Path, renderer: str, tree: Tree, allow_empty: bool) -
 
     slugs = {p["slug"] for p in posts}
     domain_report: list[str] = []
+    prose_edits = 0
     for post in posts:
+        prose_edits += rewrite_prose(post)
         for field in ("title", "description"):
             if isinstance(post.get(field), str):
                 post[field] = rewrite_domains(post[field], domain_report)
@@ -596,6 +697,7 @@ def sync(feed: dict, root: Path, renderer: str, tree: Tree, allow_empty: bool) -
         body = localize_image_urls(body, post["_images"], base_url)
         body = localize_post_links(body, slugs, base_url)
         body = rewrite_domains(body, domain_report)
+        lint_institution(body + (post.get("description") or ""), post["slug"])
         page = render_post_page(post, body,
                                 posts[index - 1] if index > 0 else None,
                                 posts[index + 1] if index + 1 < len(posts) else None)
@@ -611,6 +713,13 @@ def sync(feed: dict, root: Path, renderer: str, tree: Tree, allow_empty: bool) -
         print("  domain rewrites:")
         for entry in sorted(set(domain_report)):
             print(f"    {entry} ({domain_report.count(entry)}x)")
+    if tree.verbose:
+        print(f"  prose rewrites: {prose_edits} passage(s) neutralised")
+        remaining = [(p["slug"], (p.get("content_markdown") or "").count("University of Idaho"))
+                     for p in posts]
+        for slug, count in remaining:
+            if count:
+                print(f"    {slug}: {count} institution reference(s) kept (attribution/citation)")
 
 
 def main() -> int:

@@ -82,6 +82,21 @@ become site-relative, and `*.uidaho.edu` hostnames become `example.com` placehol
 Email addresses (`mindrouter@uidaho.edu`) are left alone — the rule only matches
 hostnames.
 
+Posts are written for the University of Idaho deployment but syndicated to a site that
+serves every deployment, so `PROSE_REWRITES` in the sync script neutralises the passages
+where the institution is incidental — instructions addressed to campus readers ("If
+you're at the University of Idaho, getting started takes about five minutes"), and
+technical facts that happen to name the operator. Authorship and funding credits,
+citations of other institutions, and unattributed "on-campus" phrasing are left as
+written.
+
+Each entry is an exact substring of the upstream markdown. Because upstream can reword a
+passage and quietly break a substitution, the sync also **lints the rendered result**:
+any institution reference outside the allowlist of intended keeps (`INSTITUTION_KEEP` —
+authorship, funding, support address) prints a warning naming the post and quoting the
+sentence. Fix the `PROSE_REWRITES` entry rather than ignoring the warning — or better,
+fix the wording in the CMS so no substitution is needed.
+
 Add `--allow-empty-feed` only if the feed legitimately returns zero posts — the script
 otherwise refuses to delete every local post, since an empty feed is indistinguishable
 from an upstream fault.

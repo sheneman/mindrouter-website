@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Agentic AI on Campus: Powering Claude Code with MindRouter — MindRouter Blog</title>
-    <meta name="description" content="How the University of Idaho runs autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.">
+    <meta name="description" content="How we run autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.">
     <meta property="og:title" content="Agentic AI on Campus: Powering Claude Code with MindRouter — MindRouter Blog">
-    <meta property="og:description" content="How the University of Idaho runs autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.">
+    <meta property="og:description" content="How we run autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.">
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://mindrouter.ai/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/">
     <meta name="twitter:card" content="summary_large_image">
@@ -61,13 +61,13 @@
                     <h1 class="mb-2">Agentic AI on Campus: Powering Claude Code with MindRouter</h1>
                     <p class="text-muted mb-4" style="font-size:0.9rem;"><time datetime="2026-03-13T13:45:08+00:00">March 13, 2026</time></p>
                     <article class="blog-content">
-<p><em>How the University of Idaho runs autonomous coding agents on local GPU infrastructure — faster, cheaper, and without sending a single byte off campus.</em></p>
+<p><em>How we run autonomous coding agents on local GPU infrastructure — faster, cheaper, and without sending a single byte off campus.</em></p>
 <hr />
 <p>There is a quiet revolution happening in how developers interact with large language models. The era of copy-pasting snippets into a chat window is giving way to something far more powerful: <strong>agentic workflows</strong>, where an AI assistant doesn't just answer your question — it picks up tools, reads your codebase, writes files, runs tests, and iterates until the job is done.</p>
 <p>Tools like Anthropic's <strong>Claude Code</strong> have become the reference implementation for this pattern. From the command line, Claude Code can autonomously navigate a repository, edit files across dozens of modules, execute shell commands, and orchestrate multi-step tasks that would take a human developer hours. It is, in a very real sense, a junior developer that never sleeps.</p>
-<p>But here's the thing most people don't realize: <strong>Claude Code doesn't have to talk to Anthropic's servers.</strong> With a few environment variables, you can point it at any inference backend that speaks the right API protocol — including one running on GPUs down the hall from your office. At the University of Idaho, that backend is <strong>MindRouter</strong>, and the combination is turning out to be a game-changer.</p>
+<p>But here's the thing most people don't realize: <strong>Claude Code doesn't have to talk to Anthropic's servers.</strong> With a few environment variables, you can point it at any inference backend that speaks the right API protocol — including one running on GPUs down the hall from your office. In our case, that backend is <strong>MindRouter</strong>, and the combination is turning out to be a game-changer.</p>
 <h2>What Is MindRouter?</h2>
-<p>MindRouter is the University of Idaho's institutional LLM inference platform. It sits on top of a cluster of university-owned GPUs — currently 31 backend nodes serving over 60 models — and exposes them through industry-standard APIs. If your code can talk to OpenAI, Ollama, or Anthropic's Messages API, it can talk to MindRouter without modification.</p>
+<p>MindRouter is an institutional LLM inference platform. It sits on top of a cluster of university-owned GPUs — currently 31 backend nodes serving over 60 models — and exposes them through industry-standard APIs. If your code can talk to OpenAI, Ollama, or Anthropic's Messages API, it can talk to MindRouter without modification.</p>
 <p>The platform handles load balancing, fair-share scheduling, and full observability across the cluster. It has served over two billion tokens to date. And critically, every byte of data stays on university infrastructure. There is no cloud provider in the loop. No training on your prompts. No third-party data processing agreement to worry about.</p>
 <h2>Choosing the Right Model for Agentic Work</h2>
 <p>Not all language models are created equal when it comes to agentic tasks. A model that writes beautiful prose may fall apart when asked to produce a structured tool call, follow a multi-step plan, or recover gracefully when a shell command returns an unexpected error. Agentic work demands a model that is strong at instruction following, tool use, structured output, and long-context reasoning — all at once.  </p>
@@ -122,7 +122,7 @@ behavior identical.&quot;
 <h2>Data Sovereignty: Keeping Research on Campus</h2>
 <p>For many university researchers, the cost argument is secondary to the data argument. If you work with IRB-protected human subjects data, FERPA-covered student records, pre-publication research, proprietary datasets from industry partners, or anything governed by an export control regulation, sending that data to a commercial API endpoint is somewhere between "complicated paperwork" and "flatly prohibited."</p>
 <p>MindRouter sidesteps this entirely. The inference cluster is on university-managed infrastructure, behind university authentication, with university-controlled audit trails. Your prompts are not stored for model training. Your data does not leave the institutional boundary. For compliance-sensitive work, this isn't a nice-to-have, it's a prerequisite.</p>
-<p><strong>NOTE:</strong> MindRouter at the University of Idaho has not yet been approved for <strong>higher risk</strong> data, but we're actively working on making that happen.</p>
+<p><strong>NOTE:</strong> Our MindRouter deployment has not yet been approved for <strong>higher risk</strong> data, but we're actively working on making that happen.</p>
 <h2>Beyond Coding: Other Agentic Patterns</h2>
 <p>While Claude Code is the most vivid example, the same MindRouter backend can power any agentic framework that speaks OpenAI-compatible or Anthropic-compatible APIs. LangChain agents, LlamaIndex pipelines, custom Python scripts using the OpenAI SDK — all of them can be pointed at MindRouter with the same base URL and API key pattern:</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
@@ -141,7 +141,7 @@ behavior identical.&quot;
 
 <p>MindRouter supports tool calling, streaming, and structured output natively — the building blocks of any agentic system. The cluster doesn't care whether the request comes from Claude Code, a Jupyter notebook, or a cron job running at 3 a.m.</p>
 <h2>Getting Started</h2>
-<p>If you're at the University of Idaho, getting started takes about five minutes:</p>
+<p>Getting started takes about five minutes:</p>
 <ol>
 <li><strong>Log in</strong> to <a href="https://mindrouter.example.com">mindrouter.example.com</a> with your university credentials.</li>
 <li><strong>Generate an API key</strong> from the dashboard.</li>
@@ -197,7 +197,7 @@ behavior identical.&quot;
     "@type": "BlogPosting",
     "dateModified": "2026-07-27T12:16:04+00:00",
     "datePublished": "2026-03-13T13:45:08+00:00",
-    "description": "How the University of Idaho runs autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.",
+    "description": "How we run autonomous coding agents on local GPU infrastructure: faster, cheaper, and without sending a single byte off campus.",
     "headline": "Agentic AI on Campus: Powering Claude Code with MindRouter",
     "mainEntityOfPage": "https://mindrouter.ai/blog/agentic-ai-on-campus-powering-claude-code-with-mindrouter/",
     "publisher": {
