@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Voice API - MindRouter</title>
+    <meta name="description" content="Voice API reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#where-this-fits">Where this fits</a></li>
+                <li class="nav-item"><a class="nav-link" href="#authentication">Authentication</a></li>
+                <li class="nav-item"><a class="nav-link" href="#post-v1audiospeech-text-to-speech-tts">POST /v1/audio/speech — Text-to-Speech (TTS)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#post-v1audiotranscriptions-speech-to-text-stt">POST /v1/audio/transcriptions — Speech-to-Text (STT)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#quick-reference">Quick reference</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter Voice API (Audio)</h1>
+<p>Last updated: 2026-07-23</p>
+<p>Base URL: <code>https://mindrouter.example.com</code></p>
+<p>This is the public reference for MindRouter's <strong>voice</strong> primitives: text-to-speech
+(TTS) and speech-to-text (STT). Both endpoints are OpenAI-compatible.</p>
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/voice-api.md" target="_blank" rel="noopener">docs/voice-api.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="where-this-fits">
+                <h2>Where this fits</h2>
+<p>MindRouter is a <strong>provider of single-shot generative primitives</strong>. The voice API
+turns <strong>one block of text into one audio utterance</strong> (TTS), or <strong>one uploaded audio
+file into one transcript</strong> (STT). It does <strong>not</strong> do multi-clip audio assembly,
+mixing, timeline editing, subtitle burn-in, dubbing sync, or cross-shot coherence.
+That orchestration belongs to the <em>separate</em> studio/storyboarding app that consumes
+these APIs and does its own ffmpeg assembly. Treat MindRouter as the raw
+speech-in / speech-out engine and keep the composition logic in your app.</p>
+<p>Internally, both endpoints are thin authenticated proxies: <code>/v1/audio/speech</code>
+forwards to a Kokoro-family TTS service, and <code>/v1/audio/transcriptions</code> forwards to
+a Whisper-family STT service. The shapes below are what MindRouter accepts and
+returns to you.</p>
+            </section>
+
+            <hr>
+            <section id="authentication">
+                <h2>Authentication</h2>
+<p>Every request requires an API key, sent as <strong>either</strong> header:</p>
+<ul>
+<li><code>Authorization: Bearer &lt;key&gt;</code></li>
+<li><code>X-API-Key: &lt;key&gt;</code></li>
+</ul>
+<p>If the key is missing you get <code>401</code> with detail
+<code>"Missing API key. Provide via 'Authorization: Bearer &lt;key&gt;' or 'X-API-Key: &lt;key&gt;'"</code>.
+An invalid, inactive, or expired key also returns <code>401</code>.</p>
+<p>Requests are subject to per-user token quota and per-key/per-user RPM rate limits;
+exceeding either returns <code>429 Too Many Requests</code>.</p>
+            </section>
+
+            <hr>
+            <section id="post-v1audiospeech-text-to-speech-tts">
+                <h2>POST /v1/audio/speech — Text-to-Speech (TTS)</h2>
+<p>Converts text into spoken audio. The response is the <strong>raw audio byte stream</strong> (not
+JSON), streamed back with an audio <code>Content-Type</code>.</p>
+<h3 id="request">Request</h3>
+<ul>
+<li>Method: <code>POST</code></li>
+<li>Path: <code>/v1/audio/speech</code></li>
+<li>Content-Type: <code>application/json</code></li>
+</ul>
+<p>Body fields:</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input</code></td>
+<td>string</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>The text to synthesize. Must be non-empty after trimming whitespace, or you get <code>400 "No text provided"</code>.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"kokoro"</code></td>
+<td>TTS model/voice engine name.</td>
+</tr>
+<tr>
+<td><code>voice</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"af_heart"</code></td>
+<td>Voice identifier passed through to the TTS engine.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"mp3"</code></td>
+<td>Output audio container/codec. Passed through to the engine; <code>mp3</code> maps to <code>Content-Type: audio/mpeg</code>, any other value maps to <code>audio/&lt;response_format&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>speed</code></td>
+<td>number</td>
+<td>no</td>
+<td><code>1.0</code></td>
+<td>Playback speed multiplier. Constrained to the range <code>0.25</code>–<code>4.0</code> (inclusive); out-of-range values are rejected with <code>422</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Notes on voices/formats: MindRouter does not validate or enumerate <code>voice</code> or
+<code>response_format</code> values itself — it forwards them to the backing Kokoro TTS
+service, which is the source of truth for the supported voice catalog and output
+formats. <code>af_heart</code> is the default Kokoro voice and <code>mp3</code> the default format.
+There is no <code>/v1/audio/voices</code> discovery endpoint; consult your Kokoro deployment
+for the full voice list.</p>
+<h3 id="response">Response</h3>
+<ul>
+<li><code>200 OK</code> with a streamed audio body.</li>
+<li><code>Content-Type</code>: <code>audio/mpeg</code> when <code>response_format</code> is <code>mp3</code>, otherwise
+  <code>audio/&lt;response_format&gt;</code> (e.g. <code>audio/wav</code>, <code>audio/opus</code>).</li>
+<li>The body is the audio bytes — write them straight to a file.</li>
+</ul>
+<h3 id="error-cases">Error cases</h3>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Status</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400</code></td>
+<td><code>input</code> is empty/whitespace-only (<code>"No text provided"</code>).</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>Missing/invalid/inactive/expired API key.</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>TTS is not enabled on this MindRouter instance (<code>"TTS is not enabled"</code>).</td>
+</tr>
+<tr>
+<td><code>422</code></td>
+<td><code>speed</code> outside <code>0.25</code>–<code>4.0</code>, or a malformed body.</td>
+</tr>
+<tr>
+<td><code>429</code></td>
+<td>Token quota or RPM rate limit exceeded.</td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>TTS service URL not configured server-side.</td>
+</tr>
+</tbody>
+</table>
+<p>Note: if the upstream TTS service errors mid-stream, MindRouter logs the failure and
+the stream simply ends; you may receive a <code>200</code> with a truncated/empty body rather
+than an error status. Check the byte length of what you receive.</p>
+<h3 id="curl-example">curl example</h3>
+<pre><code class="language-bash">curl -sS -X POST &quot;https://mindrouter.example.com/v1/audio/speech&quot; \
+  -H &quot;Authorization: Bearer $MINDROUTER_API_KEY&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+        &quot;model&quot;: &quot;kokoro&quot;,
+        &quot;input&quot;: &quot;Storyboard shot 3: the lighthouse beam sweeps across the harbor.&quot;,
+        &quot;voice&quot;: &quot;af_heart&quot;,
+        &quot;response_format&quot;: &quot;mp3&quot;,
+        &quot;speed&quot;: 1.0
+      }' \
+  --output shot3_vo.mp3
+</code></pre>
+<h3 id="python-example">Python example</h3>
+<pre><code class="language-python">import os
+import requests
+
+BASE_URL = &quot;https://mindrouter.example.com&quot;
+API_KEY = os.environ[&quot;MINDROUTER_API_KEY&quot;]
+
+resp = requests.post(
+    f&quot;{BASE_URL}/v1/audio/speech&quot;,
+    headers={
+        &quot;Authorization&quot;: f&quot;Bearer {API_KEY}&quot;,
+        &quot;Content-Type&quot;: &quot;application/json&quot;,
+    },
+    json={
+        &quot;model&quot;: &quot;kokoro&quot;,
+        &quot;input&quot;: &quot;Storyboard shot 3: the lighthouse beam sweeps across the harbor.&quot;,
+        &quot;voice&quot;: &quot;af_heart&quot;,
+        &quot;response_format&quot;: &quot;mp3&quot;,
+        &quot;speed&quot;: 1.0,
+    },
+    stream=True,
+)
+resp.raise_for_status()
+
+with open(&quot;shot3_vo.mp3&quot;, &quot;wb&quot;) as f:
+    for chunk in resp.iter_content(chunk_size=4096):
+        f.write(chunk)
+
+print(&quot;wrote shot3_vo.mp3&quot;)
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="post-v1audiotranscriptions-speech-to-text-stt">
+                <h2>POST /v1/audio/transcriptions — Speech-to-Text (STT)</h2>
+<p>Transcribes an uploaded audio file to text. This endpoint takes
+<strong><code>multipart/form-data</code></strong>, not JSON.</p>
+<h3 id="request">Request</h3>
+<ul>
+<li>Method: <code>POST</code></li>
+<li>Path: <code>/v1/audio/transcriptions</code></li>
+<li>Content-Type: <code>multipart/form-data</code></li>
+</ul>
+<p>Form fields:</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file</code></td>
+<td>file upload</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>The audio file to transcribe. Sent as a multipart file part. The original filename and content-type are forwarded to the STT engine; a missing filename defaults to <code>audio.webm</code>.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>whisper-large-v3-turbo</code></td>
+<td>STT model name. When omitted, the server default (config key <code>voice.stt_model</code>) is used. OpenAI-dialect names (<code>whisper-1</code>, <code>whisper</code>, <code>gpt-4o-transcribe</code>, <code>gpt-4o-mini-transcribe</code>, <code>default</code>, <code>default-stt</code>) are treated as <strong>aliases for the server default</strong>, so stock OpenAI SDK code works unchanged. Any other explicit name is forwarded verbatim (for installations with multiple installed models); an unknown name returns <code>400</code> naming the configured default.</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td>string</td>
+<td>no</td>
+<td>(auto-detect)</td>
+<td>Optional ISO language hint (e.g. <code>en</code>). Only forwarded to the engine when provided; otherwise the engine auto-detects.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>json</code></td>
+<td>One of <code>json</code>, <code>text</code>, <code>verbose_json</code>, <code>srt</code>, <code>vtt</code>. Case-insensitive. An unsupported value returns <code>400</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="response">Response</h3>
+<p>The response shape depends on <code>response_format</code>:</p>
+<ul>
+<li><code>json</code> (default) and <code>verbose_json</code> → <code>200 OK</code>, <code>Content-Type: application/json</code>.
+  The JSON body is passed through from the STT engine. For <code>json</code> this is typically
+  <code>{"text": "..."}</code>; <code>verbose_json</code> additionally includes timing/segment metadata
+  as produced by the Whisper engine.</li>
+<li><code>text</code> → <code>200 OK</code>, <code>Content-Type: text/plain</code> — the raw transcript text.</li>
+<li><code>srt</code> → <code>200 OK</code>, <code>Content-Type: text/plain</code> — SubRip subtitle text.</li>
+<li><code>vtt</code> → <code>200 OK</code>, <code>Content-Type: text/vtt</code> — WebVTT subtitle text.</li>
+</ul>
+<h3 id="error-cases">Error cases</h3>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Status</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400</code></td>
+<td><code>response_format</code> is not one of <code>json</code>, <code>text</code>, <code>verbose_json</code>, <code>srt</code>, <code>vtt</code>.</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>Missing/invalid/inactive/expired API key.</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>STT is not enabled on this MindRouter instance (<code>"STT is not enabled"</code>).</td>
+</tr>
+<tr>
+<td><code>422</code></td>
+<td>Missing required <code>file</code> part.</td>
+</tr>
+<tr>
+<td><code>429</code></td>
+<td>Token quota or RPM rate limit exceeded.</td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>STT service URL not configured server-side.</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>Unknown STT model name — the response names the configured default to use instead (or omit <code>model</code>).</td>
+</tr>
+<tr>
+<td><code>502</code></td>
+<td>Upstream STT service returned an error, was unavailable, or timed out. The timeout message notes the model may still be loading — retry after a short delay.</td>
+</tr>
+</tbody>
+</table>
+<p>The upstream request has a generous 600-second timeout to accommodate long audio and
+cold model loads, so large files may take a while.</p>
+<h3 id="curl-example">curl example</h3>
+<pre><code class="language-bash">curl -sS -X POST &quot;https://mindrouter.example.com/v1/audio/transcriptions&quot; \
+  -H &quot;X-API-Key: $MINDROUTER_API_KEY&quot; \
+  -F &quot;file=@narration_take2.wav&quot; \
+  -F &quot;model=whisper-large-v3-turbo&quot; \
+  -F &quot;language=en&quot; \
+  -F &quot;response_format=json&quot;
+</code></pre>
+<p>Get subtitles directly for a storyboard clip:</p>
+<pre><code class="language-bash">curl -sS -X POST &quot;https://mindrouter.example.com/v1/audio/transcriptions&quot; \
+  -H &quot;X-API-Key: $MINDROUTER_API_KEY&quot; \
+  -F &quot;file=@shot3_dialogue.mp3&quot; \
+  -F &quot;response_format=srt&quot; \
+  --output shot3_dialogue.srt
+</code></pre>
+<h3 id="python-example">Python example</h3>
+<pre><code class="language-python">import os
+import requests
+
+BASE_URL = &quot;https://mindrouter.example.com&quot;
+API_KEY = os.environ[&quot;MINDROUTER_API_KEY&quot;]
+
+with open(&quot;narration_take2.wav&quot;, &quot;rb&quot;) as audio:
+    resp = requests.post(
+        f&quot;{BASE_URL}/v1/audio/transcriptions&quot;,
+        headers={&quot;X-API-Key&quot;: API_KEY},
+        files={&quot;file&quot;: (&quot;narration_take2.wav&quot;, audio, &quot;audio/wav&quot;)},
+        data={
+            &quot;model&quot;: &quot;whisper-large-v3-turbo&quot;,
+            &quot;language&quot;: &quot;en&quot;,
+            &quot;response_format&quot;: &quot;json&quot;,
+        },
+    )
+resp.raise_for_status()
+
+# response_format=json -&gt; parse JSON; for text/srt/vtt use resp.text
+print(resp.json()[&quot;text&quot;])
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="quick-reference">
+                <h2>Quick reference</h2>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Body</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/v1/audio/speech</code></td>
+<td>POST</td>
+<td>JSON (<code>input</code>, <code>voice</code>, <code>model</code>, <code>response_format</code>, <code>speed</code>)</td>
+<td>Streamed audio bytes (<code>audio/mpeg</code> for mp3)</td>
+</tr>
+<tr>
+<td><code>/v1/audio/transcriptions</code></td>
+<td>POST</td>
+<td>multipart (<code>file</code>, <code>model</code>, <code>language</code>, <code>response_format</code>)</td>
+<td>JSON or plain text/SRT/VTT transcript</td>
+</tr>
+</tbody>
+</table>
+<p>Both endpoints must be <strong>enabled</strong> on the target MindRouter instance (server config
+keys <code>voice.tts_enabled</code> / <code>voice.stt_enabled</code>); if disabled you receive <code>404</code>.</p>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

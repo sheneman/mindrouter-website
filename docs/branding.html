@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Branding &amp; Theming - MindRouter</title>
+    <meta name="description" content="Branding &amp; Theming reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#where">Where</a></li>
+                <li class="nav-item"><a class="nav-link" href="#what-you-can-customize">What you can customize</a></li>
+                <li class="nav-item"><a class="nav-link" href="#accessible-accent-colors-contrast-handling">Accessible accent colors (contrast handling)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#emails">Emails</a></li>
+                <li class="nav-item"><a class="nav-link" href="#how-it-works">How it works</a></li>
+                <li class="nav-item"><a class="nav-link" href="#deployment-notes">Deployment notes</a></li>
+                <li class="nav-item"><a class="nav-link" href="#notes-limits">Notes / limits</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> UI Branding &amp; Theming</h1>
+<p>MindRouter can be rebranded per deployment so a single installation matches one
+institution's visual identity — organization name, logos, favicon, and accent
+colors — across the entire web UI, in both light and dark mode.</p>
+<p>This is an <strong>installation-wide</strong> setting (not per-user or per-group). Every user
+of the deployment sees the same brand.</p>
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/branding.md" target="_blank" rel="noopener">docs/branding.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="where">
+                <h2>Where</h2>
+<p>Admin menu → <strong>Branding</strong> (<code>/admin/branding</code>). Viewing requires admin-read;
+saving requires a full admin (<code>is_admin</code>). All changes are recorded in the admin
+audit log (<code>branding.*</code> actions).</p>
+            </section>
+
+            <hr>
+            <section id="what-you-can-customize">
+                <h2>What you can customize</h2>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Organization / app name</td>
+<td>Top navbar, browser tab titles, footer</td>
+</tr>
+<tr>
+<td>Tagline</td>
+<td>Footer, beside the name</td>
+</tr>
+<tr>
+<td>Accent color — light theme</td>
+<td>Buttons, links, focus rings, stat-card accents (light mode)</td>
+</tr>
+<tr>
+<td>Accent color — dark theme</td>
+<td>Same, in dark mode</td>
+</tr>
+<tr>
+<td>Headline color</td>
+<td>Headlines such as the email blog/notification title; defaults to a neutral near-black (light accents read poorly as headline text). Buttons/links keep the accent.</td>
+</tr>
+<tr>
+<td>Logo — dark theme</td>
+<td>Top navbar (always a dark background), plus footer and login card in dark mode</td>
+</tr>
+<tr>
+<td>Logo — light theme</td>
+<td>Footer and login card in light mode</td>
+</tr>
+<tr>
+<td>Favicon</td>
+<td>Browser tab icon</td>
+</tr>
+</tbody>
+</table>
+<p>Logos appear in the <strong>navbar (header)</strong>, the <strong>footer</strong>, and the <strong>login card</strong>.
+The navbar always has a dark background, so it uses the dark-theme logo (falling
+back to the light one); the footer and login card follow the active theme and
+swap between the two logo variants automatically.</p>
+<p>The <strong>live preview</strong> on the page shows a mock navbar, buttons, link, and stat
+card in both light and dark themes, updating as you pick colors. Nothing is
+applied site-wide until you click <strong>Save</strong>.</p>
+<p>Use <strong>Reset to defaults</strong> to restore the stock MindRouter name, colors, and
+remove all uploaded assets.</p>
+            </section>
+
+            <hr>
+            <section id="accessible-accent-colors-contrast-handling">
+                <h2>Accessible accent colors (contrast handling)</h2>
+<p>A brand accent is often a light color (e.g. University of Idaho <em>Pride Gold</em>
+<code>#F1B300</code>) that would be illegible with the default white button text. For each
+theme's accent, MindRouter derives two accessible companions so light accents
+stay readable:</p>
+<ul>
+<li><strong><code>--mr-accent-on</code></strong> — the foreground used <em>on</em> an accent fill (button text).
+  White by default; flips to black when white would fall below a 3.0 contrast
+  ratio on the accent (matching Bootstrap's convention: white on blue/red, dark
+  on gold/yellow). A gold button gets black, legible text.</li>
+<li><strong><code>--mr-accent-ink</code></strong> — the accent used as <em>text</em> on the page background
+  (links, <code>.text-primary</code>, outline-button text, active sidebar item). Darkened
+  (light page) or lightened (dark page) only as far as needed to reach a 4.5:1
+  WCAG contrast ratio. Fills, borders, and focus rings keep the true brand color.</li>
+</ul>
+<p>Stock mid-tone accents (default blue <code>#0d6efd</code>) are left untouched — the
+derivation only intervenes when the accent would otherwise be unreadable. The
+math lives in <code>_best_fg</code> / <code>_accessible_ink</code> in
+<code>backend/app/services/branding.py</code>.</p>
+            </section>
+
+            <hr>
+            <section id="emails">
+                <h2>Emails</h2>
+<p>Outgoing emails (blog-post notifications, admin/bulk notifications, the test
+email) follow the same brand — the blue default header is gone. Because email is
+a constrained medium, the treatment differs from the web UI:</p>
+<ul>
+<li><strong>No CSS variables or SVG.</strong> Email clients strip <code>&lt;style&gt;</code> and don't render
+  SVG, so all styling is inline and the logo must be a <strong>raster</strong> image. Upload a
+  PNG/JPG/GIF to the <strong>Email logo</strong> slot on the branding page (separate from the
+  navbar SVG logos). A horizontal logo on a transparent/white background works
+  best.</li>
+<li><strong>The logo is embedded, not linked.</strong> It's attached inline via <code>cid:</code> (the
+  message becomes <code>multipart/related</code>), so it displays even when the client
+  blocks remote images. If no email logo is set, the header shows the
+  organization name as text.</li>
+<li><strong>Accent colors are contrast-safe.</strong> The header carries a thin accent rule, the
+  blog-post button uses the accent as its fill with the accessible foreground
+  (black text on gold), and links/headings use the darkened <code>ink</code> — so a light
+  brand accent stays legible on the white email background.</li>
+</ul>
+<p>Email templates live in <code>backend/app/services/email_service.py</code> (<code>_wrap_html</code>
+builds the branded shell; <code>_send_one</code> performs the CID embed).</p>
+            </section>
+
+            <hr>
+            <section id="how-it-works">
+                <h2>How it works</h2>
+<ul>
+<li><strong>Text/color values</strong> are stored as <code>branding.*</code> rows in the <code>app_config</code>
+  key/value table (<code>crud.get_config_json</code> / <code>crud.set_config</code>).</li>
+<li><strong>Uploaded logos/favicon</strong> are written to <code>BRANDING_STORAGE_PATH</code>
+  (default <code>/data/branding</code>, a persistent <code>branding_data</code> volume) and served,
+  cache-busted, from the public route <code>/branding/asset/{filename}</code> — public so
+  logos also render on the login page.</li>
+<li>Accent colors are injected into <code>base.html</code> as CSS custom properties
+  (<code>--bs-primary</code> and friends) scoped to <code>:root</code> and <code>[data-bs-theme="dark"]</code>,
+  layering on top of the existing Bootstrap 5 theming. Only validated hex values
+  are ever emitted, so the injection is safe.</li>
+<li>Branding is read on every page from an in-memory cache
+  (<code>backend/app/services/branding.py</code>) that is loaded at startup and refreshed
+  every ~15s, so a save propagates to all uvicorn workers within a few seconds
+  without a restart. The saving worker refreshes immediately.</li>
+</ul>
+            </section>
+
+            <hr>
+            <section id="deployment-notes">
+                <h2>Deployment notes</h2>
+<p><code>BRANDING_STORAGE_PATH</code> and <code>BRANDING_MAX_LOGO_MB</code> must be present in
+<code>settings.py</code> <strong>and</strong> <code>docker-compose.yml</code> (pydantic-settings only reads env
+inside the container). The <code>branding_data</code> named volume and the Dockerfile
+<code>mkdir /data/branding</code> keep uploaded assets across container rebuilds.</p>
+            </section>
+
+            <hr>
+            <section id="notes-limits">
+                <h2>Notes / limits</h2>
+<ul>
+<li>Logo/favicon uploads are capped at <code>BRANDING_MAX_LOGO_MB</code> (default 4 MB).
+  Allowed logo types: PNG, JPG, WebP, SVG, GIF. Favicon: ICO, PNG, SVG.</li>
+<li>The top navbar keeps its dark background by design (safe contrast in both
+  themes); the accent color drives buttons, links, and highlights rather than
+  the navbar itself.</li>
+<li>The public landing page marketing copy is not templated by this feature —
+  branding covers the app chrome (navbar, titles, footer, login, colors, logos).</li>
+</ul>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

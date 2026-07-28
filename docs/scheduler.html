@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Scheduler - MindRouter</title>
+    <meta name="description" content="Scheduler reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#overview">Overview</a></li>
+                <li class="nav-item"><a class="nav-link" href="#goals">Goals</a></li>
+                <li class="nav-item"><a class="nav-link" href="#fair-share-algorithm">Fair-Share Algorithm</a></li>
+                <li class="nav-item"><a class="nav-link" href="#backend-scoring">Backend Scoring</a></li>
+                <li class="nav-item"><a class="nav-link" href="#example-scenarios">Example Scenarios</a></li>
+                <li class="nav-item"><a class="nav-link" href="#configuration">Configuration</a></li>
+                <li class="nav-item"><a class="nav-link" href="#monitoring">Monitoring</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter Scheduler</h1>
+
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/scheduler.md" target="_blank" rel="noopener">docs/scheduler.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="overview">
+                <h2>Overview</h2>
+<p>MindRouter implements a <strong>Weighted Deficit Round Robin (WDRR)</strong> scheduler with backend scoring to achieve fair resource allocation across users while maximizing cluster throughput.</p>
+            </section>
+
+            <hr>
+            <section id="goals">
+                <h2>Goals</h2>
+<ol>
+<li><strong>Maximize token throughput</strong> - Process as many tokens as possible</li>
+<li><strong>Minimize token latency</strong> - Keep response times low</li>
+<li><strong>Allow bursting</strong> - Single user can use full cluster when idle</li>
+<li><strong>Fair rebalancing</strong> - When others arrive, quickly rebalance</li>
+<li><strong>Handle heterogeneity</strong> - Different backends, GPUs, models</li>
+</ol>
+            </section>
+
+            <hr>
+            <section id="fair-share-algorithm">
+                <h2>Fair-Share Algorithm</h2>
+<h3 id="share-weights">Share Weights</h3>
+<p>Each user belongs to a <strong>group</strong> that has a configurable <code>scheduler_weight</code> determining their share of resources. Groups are managed in the admin UI at <code>/admin/groups</code>.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Group</th>
+<th>Default Weight</th>
+<th>Relative Share</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Student</td>
+<td>1</td>
+<td>1x</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>2</td>
+<td>2x</td>
+</tr>
+<tr>
+<td>Faculty</td>
+<td>3</td>
+<td>3x</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>10</td>
+<td>10x</td>
+</tr>
+</tbody>
+</table>
+<p>Weights are stored per-group in the database (<code>groups.scheduler_weight</code>). Individual users can also have a <code>weight_override</code> set on their quota record, which takes precedence over the group weight.</p>
+<h3 id="deficit-counters">Deficit Counters</h3>
+<p>Each user maintains a <strong>deficit counter</strong> that tracks how much service they're owed:</p>
+<ul>
+<li><strong>Positive deficit</strong>: User has waited, deserves more service</li>
+<li><strong>Negative deficit</strong>: User has been served recently</li>
+</ul>
+<p>When a job completes, the user's deficit is reduced by the token cost:</p>
+<pre><code class="language-python">deficit -= tokens_used
+</code></pre>
+<h3 id="priority-calculation">Priority Calculation</h3>
+<p>Priority for each pending job is computed as:</p>
+<pre><code class="language-python">priority = (deficit + burst_credits) / weight * deprioritization_factor + wait_bonus
+</code></pre>
+<p>Where:
+- <code>deficit</code>: Current deficit counter
+- <code>burst_credits</code>: Accumulated credits from idle time
+- <code>weight</code>: Group-based share weight (or per-user override)
+- <code>deprioritization_factor</code>: Penalty for heavy users (0.1 to 1.0)
+- <code>wait_bonus</code>: Small bonus for time spent waiting</p>
+<h3 id="burst-credits">Burst Credits</h3>
+<p>When the cluster is idle, burst credits accumulate for all users:</p>
+<pre><code class="language-python">burst_credits += idle_seconds * credit_rate * weight
+</code></pre>
+<p>This allows a single user to consume the full cluster when no one else is waiting. When contention is detected (queue becomes non-empty), burst credits decay:</p>
+<pre><code class="language-python">burst_credits *= 0.5  # Decay when contention appears
+</code></pre>
+<h3 id="heavy-user-deprioritization">Heavy User Deprioritization</h3>
+<p>Users who consume more than 50% of recent cluster capacity get temporarily deprioritized:</p>
+<pre><code class="language-python">usage_fraction = user_recent_tokens / global_recent_tokens
+if usage_fraction &gt; 0.5:
+    deprioritization_factor = max(0.1, 1.0 - (usage_fraction - 0.5) * 2)
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="backend-scoring">
+                <h2>Backend Scoring</h2>
+<h3 id="hard-constraints">Hard Constraints</h3>
+<p>Backends must pass all hard constraints to be considered:</p>
+<ol>
+<li><strong>Model Available</strong>: Backend has the requested model</li>
+<li><strong>Modality Support</strong>: Backend supports vision/embeddings if needed</li>
+<li><strong>Structured Output</strong>: Backend supports JSON mode if requested</li>
+<li><strong>Capacity</strong>: <code>current + queued &lt; max_concurrent</code></li>
+<li><strong>Memory Fit</strong>: Estimated VRAM ≤ available VRAM</li>
+</ol>
+<h3 id="soft-scores">Soft Scores</h3>
+<p>Eligible backends are ranked by total score:</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Factor</th>
+<th>Points</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model Loaded</td>
+<td>+100</td>
+<td>Model already in GPU memory</td>
+</tr>
+<tr>
+<td>Low Utilization</td>
+<td>+50</td>
+<td>GPU utilization &lt; 50%</td>
+</tr>
+<tr>
+<td>Low Latency</td>
+<td>+40</td>
+<td>Low real-world latency (EMA)</td>
+</tr>
+<tr>
+<td>Short Queue</td>
+<td>+30</td>
+<td>Few pending requests</td>
+</tr>
+<tr>
+<td>High Throughput</td>
+<td>+20</td>
+<td>Recent tokens/second processed</td>
+</tr>
+<tr>
+<td>Priority</td>
+<td>+N×10</td>
+<td>Admin-configured preference</td>
+</tr>
+</tbody>
+</table>
+<h3 id="backend-selection">Backend Selection</h3>
+<p>The backend with the highest total score is selected:</p>
+<pre><code class="language-python">selected_backend = argmax(backends, key=lambda b: b.total_score)
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="example-scenarios">
+                <h2>Example Scenarios</h2>
+<h3 id="scenario-1-single-user-idle-cluster">Scenario 1: Single User, Idle Cluster</h3>
+<pre><code>Time 0: Student submits request
+- Burst credits available
+- Routed immediately to best backend
+- Full cluster available for burst
+</code></pre>
+<h3 id="scenario-2-heavy-user-light-user-arrives">Scenario 2: Heavy User, Light User Arrives</h3>
+<pre><code>Time 0: Faculty starts heavy load (many requests)
+Time 5: Student submits single request
+- Student has higher relative priority (less recent usage)
+- Student request gets served quickly
+- Faculty requests continue at lower priority
+</code></pre>
+<h3 id="scenario-3-multiple-users-competing">Scenario 3: Multiple Users Competing</h3>
+<pre><code>Faculty group (weight=3), Staff group (weight=2), Student group (weight=1) all active
+
+Distribution over time approaches:
+- Faculty group: 50% of resources (3/6)
+- Staff group: 33% of resources (2/6)
+- Student group: 17% of resources (1/6)
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="configuration">
+                <h2>Configuration</h2>
+<h3 id="group-configuration-preferred">Group Configuration (Preferred)</h3>
+<p>Weights are configured per-group in the admin UI at <code>/admin/groups</code>. Each group has a <code>scheduler_weight</code> field that controls fair-share allocation. Individual users can have a <code>weight_override</code> on their quota record.</p>
+<h3 id="environment-variables">Environment Variables</h3>
+<pre><code class="language-bash"># Deprecated weight env vars — still read as fallbacks when a user has
+# no group or the group has no scheduler_weight set, but the admin UI
+# group settings take precedence.
+SCHEDULER_WEIGHT_STUDENT=1
+SCHEDULER_WEIGHT_STAFF=2
+SCHEDULER_WEIGHT_FACULTY=3
+SCHEDULER_WEIGHT_ADMIN=10
+
+# Fairness
+SCHEDULER_FAIRNESS_WINDOW=300  # 5 minute rolling window
+SCHEDULER_DEPRIORITIZE_THRESHOLD=0.5  # 50%
+
+# Scoring
+SCHEDULER_SCORE_MODEL_LOADED=100
+SCHEDULER_SCORE_LOW_UTILIZATION=50
+SCHEDULER_SCORE_LATENCY=40
+SCHEDULER_SCORE_SHORT_QUEUE=30
+SCHEDULER_SCORE_HIGH_THROUGHPUT=20
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="monitoring">
+                <h2>Monitoring</h2>
+<h3 id="queue-statistics">Queue Statistics</h3>
+<pre><code class="language-json">{
+  &quot;queue&quot;: {
+    &quot;total&quot;: 5,
+    &quot;by_user&quot;: {&quot;1&quot;: 3, &quot;2&quot;: 2},
+    &quot;by_model&quot;: {&quot;llama3.2&quot;: 4, &quot;mistral&quot;: 1},
+    &quot;average_wait_seconds&quot;: 2.5
+  },
+  &quot;fair_share&quot;: {
+    &quot;total_users&quot;: 2,
+    &quot;global_recent_tokens&quot;: 50000,
+    &quot;user_stats&quot;: [
+      {&quot;user_id&quot;: 1, &quot;weight&quot;: 3, &quot;deficit&quot;: -1000, &quot;recent_tokens&quot;: 30000, &quot;group&quot;: &quot;faculty&quot;},
+      {&quot;user_id&quot;: 2, &quot;weight&quot;: 1, &quot;deficit&quot;: 500, &quot;recent_tokens&quot;: 20000, &quot;group&quot;: &quot;student&quot;}
+    ]
+  }
+}
+</code></pre>
+<h3 id="scheduler-decision-records">Scheduler Decision Records</h3>
+<p>Each routing decision is logged:</p>
+<pre><code class="language-json">{
+  &quot;request_id&quot;: &quot;abc123&quot;,
+  &quot;selected_backend_id&quot;: 1,
+  &quot;candidate_backends&quot;: [1, 2, 3],
+  &quot;scores&quot;: {&quot;1&quot;: 150, &quot;2&quot;: 80, &quot;3&quot;: 60},
+  &quot;user_deficit&quot;: -1000,
+  &quot;user_weight&quot;: 3,
+  &quot;user_group&quot;: &quot;faculty&quot;,
+  &quot;user_recent_usage&quot;: 30000
+}
+</code></pre>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

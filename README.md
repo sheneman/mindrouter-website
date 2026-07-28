@@ -20,6 +20,35 @@ the prompt in **`tools/update-pricing.md`** — designed to run as a scheduled C
 (monthly cron) that re-researches prices and opens a PR. The page fetches the JSON at
 load, so it needs to be served over HTTP (see below).
 
+## Documentation (generated from the MindRouter repo)
+
+`documentation.html` and everything under `docs/` is **generated** — never hand-edit it.
+[github.com/ui-insight/MindRouter](https://github.com/ui-insight/MindRouter) is the source
+of truth; `tools/build_docs.py` pulls the markdown and renders it into this site's chrome:
+
+| Upstream | Page |
+| --- | --- |
+| `docs/index.md` | `documentation.html` |
+| `docs/images-api.md`, `video-api.md`, `voice-api.md` | `docs/<name>.html` |
+| `docs/media-studio-integration.md`, `architecture.md`, `scheduler.md`, `branding.md` | `docs/<name>.html` |
+
+```bash
+pip install markdown                        # once
+python tools/build_docs.py --dry-run -v     # preview
+python tools/build_docs.py                  # write the changes
+```
+
+Rewrites applied on the way through: `*.uidaho.edu` hostnames become `example.com` (the
+upstream media API references hard-code the University of Idaho deployment as their base
+URL, which is wrong for a product site); links between markdown files point at the
+generated pages, falling back to GitHub for anything not mirrored; ` -- ` becomes an em
+dash; upstream's numbered table of contents is dropped in favour of the sticky sidebar,
+keeping its pointers to the other references. Output is deterministic, so rebuilding
+against unchanged upstream docs leaves the git tree clean.
+
+Add a page by appending to `PAGES` in the script. `--source DIR` renders from a local
+MindRouter checkout instead of GitHub.
+
 ## Blog (pull syndication)
 
 Everything under `blog/` is **generated** — never hand-edit it. The MindRouter gateway
@@ -34,28 +63,26 @@ regenerates `blog/index.html` and `blog/feed.xml`, and deletes any post director
 image the feed no longer lists — that is how un-syndication propagates. Rendering is
 deterministic, so a sync that changes nothing leaves the git tree clean.
 
-> **The feed is currently campus-only.** `mindrouter.uidaho.edu` is split-horizon DNS:
-> on campus it resolves to `172.27.192.252` (private), and the public record
-> (`mindrouter-public.hpc.uidaho.edu`, `129.101.236.240`) does not answer. GitHub-hosted
-> runners therefore time out, so the hourly schedule in the workflow is commented out
-> and syncing is a manual step from a machine on the campus network. Re-enable the
-> `schedule:` block once the feed answers publicly, or point the job at a self-hosted
-> campus runner.
-
-`.github/workflows/sync-blog.yml` runs it on demand (**Actions → Sync blog →
-Run workflow**), committing only when the tree actually changed. The manual run takes
-two options: `dry_run` to preview, and `allow_empty_feed` — a safety catch, since the
-script refuses to delete every local post when the feed comes back empty (that shape is
-indistinguishable from an upstream fault). If the posts really were un-syndicated,
-re-run with it checked.
-
-Running it by hand:
+**Syncing is manual, and must run from the campus network.** `mindrouter.uidaho.edu` is
+split-horizon DNS: on campus it resolves to `172.27.192.252` (RFC1918), while the public
+record (`mindrouter-public.hpc.uidaho.edu`, `129.101.236.240`) does not answer. A
+GitHub-hosted runner times out on both the feed and the images, so there is no scheduled
+job — sync when you publish or un-syndicate something:
 
 ```bash
-pip install markdown pygments
-python tools/sync_blog.py --dry-run -v      # preview against the live feed
-python tools/sync_blog.py                   # write the changes
+pip install markdown pygments                # once
+python tools/sync_blog.py --dry-run -v       # preview against the live feed
+python tools/sync_blog.py                    # write the changes
+git add -A blog && git commit -m 'blog: sync from MindRouter syndication feed' && git push
 ```
+
+Add `--allow-empty-feed` only if the feed legitimately returns zero posts — the script
+otherwise refuses to delete every local post, since an empty feed is indistinguishable
+from an upstream fault.
+
+If the feed ever answers publicly, a ready-made hourly GitHub Action is in the history at
+commit `8663b83` (`.github/workflows/sync-blog.yml`) — restore it and uncomment its
+`schedule:` block. The same file also works unchanged on a self-hosted campus runner.
 
 Posts render from `content_markdown` via python-markdown with the same extensions the
 gateway uses (`codehilite` classes are already styled by `css/blog.css`); pass

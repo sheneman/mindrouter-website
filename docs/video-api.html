@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Video Generation API - MindRouter</title>
+    <meta name="description" content="Video Generation API reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#what-this-api-is-and-is-not">What this API is (and is not)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#authentication">Authentication</a></li>
+                <li class="nav-item"><a class="nav-link" href="#the-async-model-submit-poll-fetch">The async model: submit → poll → fetch</a></li>
+                <li class="nav-item"><a class="nav-link" href="#endpoints">Endpoints</a></li>
+                <li class="nav-item"><a class="nav-link" href="#image-guided-video-keyframes">Image-guided video (keyframes)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#the-job-object">The job object</a></li>
+                <li class="nav-item"><a class="nav-link" href="#sizes-durations-fps">Sizes, durations, fps</a></li>
+                <li class="nav-item"><a class="nav-link" href="#limits-quotas-costs">Limits, quotas &amp; costs</a></li>
+                <li class="nav-item"><a class="nav-link" href="#worked-example-keyframe-guided-clip-end-to-end">Worked example: keyframe-guided clip, end to end</a></li>
+                <li class="nav-item"><a class="nav-link" href="#notes-for-the-consuming-studio-application">Notes for the consuming (studio) application</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter Video Generation API (`/v1/videos`)</h1>
+<p><strong>Last updated: 2026-07-23</strong></p>
+<p>Base URL: <code>https://mindrouter.example.com</code></p>
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/video-api.md" target="_blank" rel="noopener">docs/video-api.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="what-this-api-is-and-is-not">
+                <h2>What this API is (and is not)</h2>
+<p>MindRouter is a <strong>provider of single-shot generative primitives</strong>. For video, that
+means it renders <strong>one clip per request</strong> — a text prompt (optionally guided by one
+or two keyframe images) becomes a single MP4 with a synchronized audio track.</p>
+<p>MindRouter does <strong>not</strong> do multi-shot assembly, stitching, timeline editing, or
+cross-shot coherence. Those belong to the <strong>separate studio/storyboarding
+application</strong> that consumes this API — it stores its own storyboards, submits one
+<code>POST /v1/videos</code> per shot, and stitches the returned MP4s (ffmpeg) on its own side.
+Keep that boundary in mind: <strong>MindRouter renders clips; your app assembles them.</strong></p>
+<div class="alert alert-secondary">
+<p><strong>Changed in this release.</strong> Image-guided (keyframe) video is now available over
+the API. Earlier docs described image conditioning as a "future" addition — that
+is no longer true. You upload a reference image with <code>POST /v1/videos/assets</code>, then
+pass the returned asset id as <code>start_image_asset_id</code> and/or <code>end_image_asset_id</code> on
+<code>POST /v1/videos</code>. See <a href="#image-guided-video-keyframes">Image-guided video</a>.</p>
+</div>
+            </section>
+
+            <hr>
+            <section id="authentication">
+                <h2>Authentication</h2>
+<p>Every request needs an API key, sent as <strong>either</strong> header:</p>
+<pre><code>X-API-Key: &lt;key&gt;
+</code></pre>
+<pre><code>Authorization: Bearer &lt;key&gt;
+</code></pre>
+<p>The caller's account must have <code>video_generation_enabled</code>, and the service must be
+enabled server-side (<code>vid.enabled</code>). Otherwise you get <code>403</code> (account) or <code>503</code>
+(service disabled).</p>
+            </section>
+
+            <hr>
+            <section id="the-async-model-submit-poll-fetch">
+                <h2>The async model: submit → poll → fetch</h2>
+<p>A render outlives an HTTP request, so the API is asynchronous:</p>
+<ol>
+<li><strong>Submit</strong> — <code>POST /v1/videos</code> validates and enqueues a job, then returns <strong><code>202
+   Accepted</code></strong> immediately with a <strong>job object</strong> in status <code>queued</code>. It never returns
+   the video inline.</li>
+<li><strong>Poll</strong> — <code>GET /v1/videos/{id}</code> until <code>status</code> is <code>completed</code> or <code>failed</code>
+   (or <code>cancelled</code>). Poll every 2–5s with backoff.</li>
+<li><strong>Fetch</strong> — once <code>completed</code>, download the MP4 from <code>GET /v1/videos/{id}/content</code>.</li>
+</ol>
+<p><strong>One clip renders at a time.</strong> The GPU serializes renders into a single queue, so a
+job can sit in <code>queued</code> behind other users' work before it moves to <code>in_progress</code>.
+Design your client for a queue and show honest progress/ETA rather than blocking.</p>
+            </section>
+
+            <hr>
+            <section id="endpoints">
+                <h2>Endpoints</h2>
+<h3 id="post-v1videos-create-a-text-to-video-job"><code>POST /v1/videos</code> — create a text-to-video job</h3>
+<p><code>Content-Type: application/json</code>. Only the fields below are honored. Unknown or
+mistyped fields are surfaced according to the server's <code>field_validation</code> setting
+(logged by default; some fields carry a hint telling you the supported alternative —
+e.g. sending <code>duration</code> tells you to use <code>seconds</code>, sending <code>width</code>/<code>height</code> tells
+you to use <code>size</code>).</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>required</th>
+<th>default</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prompt</code></td>
+<td>string</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>The scene description. Must be non-empty.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>vid.default_model</code> (<code>lightricks/ltx-2.3-distilled</code>)</td>
+<td>Served video model id. Must exist; aliases are resolved.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>vid.default_size</code> (<code>1280x704</code>)</td>
+<td><code>"WIDTHxHEIGHT"</code> from the fixed preset menu (see <a href="#sizes-durations-fps">Sizes &amp; durations</a>). Off-menu → <code>400</code>.</td>
+</tr>
+<tr>
+<td><code>seconds</code></td>
+<td>int / string</td>
+<td>no</td>
+<td><code>vid.default_seconds</code> (<code>5</code>)</td>
+<td>Whole number of seconds, <code>4</code>–<code>30</code> inclusive (<code>vid.min_seconds</code>..<code>vid.max_total_seconds</code>). Non-integer or out-of-range → <code>400</code>.</td>
+</tr>
+<tr>
+<td><code>fps</code></td>
+<td>int</td>
+<td>no</td>
+<td><code>24</code></td>
+<td>Accepted but <strong>not validated</strong>: any value is stored and echoed back, but only <code>24</code> is actually rendered. Off-<code>24</code> values are neither honored nor rejected (no <code>400</code>).</td>
+</tr>
+<tr>
+<td><code>quality</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>standard</code></td>
+<td>One of <code>draft</code> | <code>standard</code> | <code>final</code>. <strong>Currently a billing multiplier only</strong> (<code>vid.quality_multipliers</code>): the distilled model renders every tier with the same fixed schedule, so output is identical across tiers. Step-count/checkpoint differentiation is planned (Phase 5). Anything else → <code>400</code>.</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>int</td>
+<td>no</td>
+<td>random</td>
+<td>Determinism seed. When omitted, a random seed is generated <strong>at submit time, persisted, and echoed</strong> on the job object — so every render is reproducible after the fact, and repeat submissions of the same prompt produce different takes. <strong>Scope of determinism</strong> (verified empirically, 2026-07-26): a fixed seed reproduces the <strong>video track bit-exactly</strong>; the model's native <strong>audio track re-rolls on every render</strong> regardless of seed, so whole-file checksums differ. If you need stable audio, extract and reuse the track from a chosen take (or replace it, e.g. with TTS narration).</td>
+</tr>
+<tr>
+<td><code>negative_prompt</code></td>
+<td>string</td>
+<td>no</td>
+<td>—</td>
+<td><strong>Ignored.</strong> The distilled model is guidance-free (CFG=1), so negative prompts cannot take effect; sending one gets a logged hint (or a <code>400</code> in enforce mode). Steer content through the positive prompt instead — LTX honors prose direction like "no speech, only wind and distant machinery".</td>
+</tr>
+<tr>
+<td><code>callback_url</code></td>
+<td>string</td>
+<td>no</td>
+<td>—</td>
+<td>Optional webhook fired on completion.</td>
+</tr>
+<tr>
+<td><code>start_image_asset_id</code></td>
+<td>int</td>
+<td>no</td>
+<td>—</td>
+<td>Asset id (from <code>POST /v1/videos/assets</code>) used as the <strong>first-frame</strong> keyframe. Must be an asset you own → else <code>400</code>.</td>
+</tr>
+<tr>
+<td><code>end_image_asset_id</code></td>
+<td>int</td>
+<td>no</td>
+<td>—</td>
+<td>Asset id used as the <strong>last-frame</strong> keyframe. Must be an asset you own → else <code>400</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Fields other OpenAI-video clients send (<code>user</code>, <code>response_format</code>, <code>metadata</code>) are
+accepted and harmlessly ignored.</p>
+<p><strong>Response:</strong> <code>202 Accepted</code> with the <a href="#the-job-object">job object</a>, <code>status:
+"queued"</code>.</p>
+<p><strong>Errors:</strong></p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>status</th>
+<th>when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400</code></td>
+<td>missing/empty <code>prompt</code>; off-menu <code>size</code>; non-integer or out-of-range <code>seconds</code>; bad <code>quality</code>; invalid <code>start_image_asset_id</code>/<code>end_image_asset_id</code> (not found or not owned by you); invalid JSON body</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>missing/invalid/inactive/expired API key</td>
+</tr>
+<tr>
+<td><code>403</code></td>
+<td>your account does not have video generation enabled</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td><code>model</code> does not exist</td>
+</tr>
+<tr>
+<td><code>429</code></td>
+<td>over the <a href="#limits-quotas-costs">per-user concurrency cap</a>, or insufficient token quota for this render</td>
+</tr>
+<tr>
+<td><code>503</code></td>
+<td>video generation is disabled service-wide</td>
+</tr>
+<tr>
+<td><code>507</code></td>
+<td>you are at/over your <a href="#limits-quotas-costs">storage cap</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="post-v1videosassets-upload-a-keyframe-image"><code>POST /v1/videos/assets</code> — upload a keyframe image</h3>
+<p><code>Content-Type: multipart/form-data</code>. <strong>This is how you supply keyframes over the
+API</strong> — the create endpoint takes asset <em>ids</em>, not raw image bytes, so you upload the
+image here first and pass back the id it returns.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>form field</th>
+<th>type</th>
+<th>required</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image</code></td>
+<td>file</td>
+<td><strong>yes</strong></td>
+<td>An image file. Content-Type must start with <code>image/</code>. PNG, JPEG, and WebP are recognized (others stored as <code>.png</code>). Max size <code>vid.max_image_upload_mb</code> (default <strong>10 MB</strong>).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response:</strong> <code>201 Created</code></p>
+<pre><code class="language-json">{
+  &quot;id&quot;: 12345,
+  &quot;object&quot;: &quot;video.asset&quot;,
+  &quot;kind&quot;: &quot;reference&quot;,
+  &quot;content_type&quot;: &quot;image/png&quot;,
+  &quot;size_bytes&quot;: 482013
+}
+</code></pre>
+<p>Use <code>id</code> as <code>start_image_asset_id</code> / <code>end_image_asset_id</code> on <code>POST /v1/videos</code>.
+Reference images count toward your storage cap.</p>
+<p><strong>Errors:</strong> <code>400</code> (missing/non-image file, or over the size limit), <code>401</code>
+(missing/invalid/inactive/expired API key), <code>403</code> (account not enabled), <code>503</code>
+(service disabled), <code>507</code> (upload would exceed your storage cap).</p>
+<h3 id="get-v1videosid-poll-one-job"><code>GET /v1/videos/{id}</code> — poll one job</h3>
+<p><strong>Response:</strong> the <a href="#the-job-object">job object</a>. Returns <code>404</code> for an id you do not
+own (no existence leak — other users' jobs are indistinguishable from missing ones).</p>
+<h3 id="get-v1videosidcontent-fetch-the-mp4"><code>GET /v1/videos/{id}/content</code> — fetch the MP4</h3>
+<p>Streams the rendered file from disk. Sets <code>Accept-Ranges: bytes</code> and returns <code>206
+Partial Content</code> for <code>Range</code> requests, so a browser <code>&lt;video&gt;</code> element can scrub.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>status</th>
+<th>when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200</code> / <code>206</code></td>
+<td>success (full body / range)</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>missing/invalid/inactive/expired API key</td>
+</tr>
+<tr>
+<td><code>409</code></td>
+<td>job exists but the video is not ready yet (not <code>completed</code>)</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>job not found / not owned, or the file is missing on disk</td>
+</tr>
+</tbody>
+</table>
+<h3 id="get-v1videos-list-your-jobs"><code>GET /v1/videos</code> — list your jobs</h3>
+<p>Query params: <code>status_filter</code> (optional; e.g. <code>queued</code>, <code>in_progress</code>, <code>completed</code>,
+<code>failed</code>, <code>cancelled</code>), <code>limit</code> (default <code>50</code>), <code>offset</code> (default <code>0</code>).</p>
+<p><strong>Response:</strong></p>
+<pre><code class="language-json">{ &quot;object&quot;: &quot;list&quot;, &quot;data&quot;: [ { …job… } ], &quot;total&quot;: 42 }
+</code></pre>
+<p>(List entries carry the job fields but omit the per-project <code>model</code>/<code>size</code>/<code>fps</code>/
+<code>quality</code> echo — poll <code>GET /v1/videos/{id}</code> for those.)</p>
+<h3 id="delete-v1videosid-cancel-or-delete"><code>DELETE /v1/videos/{id}</code> — cancel or delete</h3>
+<p>Behavior depends on the job's state:</p>
+<ul>
+<li><strong>Terminal job</strong> (<code>completed</code>, <code>failed</code>, or <code>cancelled</code>) — <strong>deletes</strong> the job's
+  rows and artifact files and <strong>reclaims the per-user storage</strong> they occupied.
+  Returns <code>{"id": "...", "object": "video", "deleted": true}</code>. This is how you free
+  space against the 50 GB storage cap over the API.</li>
+<li><strong>Running or queued job</strong> — requests cancellation (propagated to the worker;
+  a queued job's reserved quota is refunded). Returns the (updated) job object.</li>
+</ul>
+<p><code>404</code> if not found/owned.</p>
+<h3 id="get-v1videosmodels-capability-discovery"><code>GET /v1/videos/models</code> — capability discovery</h3>
+<p>Render your UI controls from this so the preset matrix has one source of truth.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="language-json">{
+  &quot;object&quot;: &quot;list&quot;,
+  &quot;data&quot;: [
+    {
+      &quot;id&quot;: &quot;lightricks/ltx-2.3-distilled&quot;,
+      &quot;supported_sizes&quot;: [&quot;1280x704&quot;, &quot;704x1280&quot;, &quot;1024x576&quot;, &quot;768x448&quot;],
+      &quot;min_seconds&quot;: 4,
+      &quot;max_seconds&quot;: 30,
+      &quot;supported_fps&quot;: [24],
+      &quot;supported_qualities&quot;: [&quot;draft&quot;, &quot;standard&quot;, &quot;final&quot;],
+      &quot;supports_text_to_video&quot;: true,
+      &quot;supports_image_to_video&quot;: true,
+      &quot;supports_keyframes&quot;: true,
+      &quot;max_shots&quot;: 1,
+      &quot;license_notice&quot;: &quot;AI-generated&quot;
+    }
+  ]
+}
+</code></pre>
+<div class="alert alert-secondary">
+<p><strong>Capability flags</strong> now reflect shipped behavior (since 2.8.42):
+<code>supports_image_to_video</code> and <code>supports_keyframes</code> are <code>true</code> because
+<code>start_image_asset_id</code> (first-frame conditioning) and <code>end_image_asset_id</code>
+(last-frame keyframe) are honored end-to-end by the render worker (see below).</p>
+</div>
+            </section>
+
+            <hr>
+            <section id="image-guided-video-keyframes">
+                <h2>Image-guided video (keyframes)</h2>
+<p>To condition a clip on reference images:</p>
+<ol>
+<li><code>POST /v1/videos/assets</code> with the image → get an asset <code>id</code>.</li>
+<li><code>POST /v1/videos</code> with <code>start_image_asset_id</code> (first frame), <code>end_image_asset_id</code>
+   (last frame), or both — alongside the usual <code>prompt</code>/<code>size</code>/<code>seconds</code>.</li>
+</ol>
+<p>Both asset ids must reference images <strong>you</strong> uploaded; anything else returns <code>400</code>.
+You can supply just a start frame, just an end frame, or both to bracket the motion.</p>
+            </section>
+
+            <hr>
+            <section id="the-job-object">
+                <h2>The job object</h2>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;vid-&lt;24 hex&gt;&quot;,
+  &quot;object&quot;: &quot;video&quot;,
+  &quot;status&quot;: &quot;queued | in_progress | completed | failed | cancelled&quot;,
+  &quot;progress&quot;: 0,
+  &quot;created_at&quot;: 1753305600,
+  &quot;started_at&quot;: null,
+  &quot;completed_at&quot;: null,
+  &quot;expires_at&quot;: null,
+  &quot;content_url&quot;: null,
+  &quot;error&quot;: null,
+  &quot;usage&quot;: {
+    &quot;duration_seconds&quot;: 5.0,
+    &quot;gpu_seconds&quot;: 0,
+    &quot;token_equivalent&quot;: 10000
+  },
+
+  &quot;model&quot;: &quot;lightricks/ltx-2.3-distilled&quot;,
+  &quot;size&quot;: &quot;1280x704&quot;,
+  &quot;fps&quot;: 24,
+  &quot;quality&quot;: &quot;standard&quot;,
+
+  &quot;seed&quot;: 1804289383,
+  &quot;seconds&quot;: 5.0,
+  &quot;start_image_asset_id&quot;: null,
+  &quot;end_image_asset_id&quot;: null
+}
+</code></pre>
+<div class="alert alert-secondary">
+<p><strong>Echoed request parameters</strong> (since 2.8.42): <code>seed</code>, <code>seconds</code>, and the
+start/end image asset ids are echoed on <strong>create</strong> and on <strong>single-job GET</strong>
+polls, alongside <code>model</code>/<code>size</code>/<code>fps</code>/<code>quality</code> — so you can always tell
+exactly what a render used (the auto-generated seed included). The <strong>list</strong>
+endpoint stays lean and omits these per-request fields.</p>
+</div>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>field</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Job id, <code>vid-</code> + 24 hex chars.</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>Always <code>"video"</code>.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>External status (below). OpenAI-video-shaped — <code>in_progress</code>, not <code>rendering</code> — so stock SDK polling loops work.</td>
+</tr>
+<tr>
+<td><code>progress</code></td>
+<td>0–100, one decimal.</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>started_at</code> / <code>completed_at</code> / <code>expires_at</code></td>
+<td>Unix seconds, or <code>null</code> if not yet reached.</td>
+</tr>
+<tr>
+<td><code>content_url</code></td>
+<td><code>"/v1/videos/{id}/content"</code> once the output exists; <code>null</code> until then.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>{ "code", "message" }</code> on failure, else <code>null</code>.</td>
+</tr>
+<tr>
+<td><code>usage.duration_seconds</code></td>
+<td>Clip length rendered.</td>
+</tr>
+<tr>
+<td><code>usage.gpu_seconds</code></td>
+<td>GPU time consumed (populated by the runner).</td>
+</tr>
+<tr>
+<td><code>usage.token_equivalent</code></td>
+<td>Tokens charged for this render (reserved up front; refunded on fail/cancel).</td>
+</tr>
+<tr>
+<td><code>model</code> / <code>size</code> / <code>fps</code> / <code>quality</code></td>
+<td>Echoed on single-job responses (<code>POST</code>, <code>GET /{id}</code>); omitted in list rows.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="statuses">Statuses</h3>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>external <code>status</code></th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>queued</code></td>
+<td>Accepted, waiting for the single render slot.</td>
+</tr>
+<tr>
+<td><code>in_progress</code></td>
+<td>Actively planning, rendering, or assembling. (Internal <code>planning</code>/<code>rendering</code>/<code>assembling</code> all map here.)</td>
+</tr>
+<tr>
+<td><code>completed</code></td>
+<td>Done; fetch <code>content_url</code>.</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>Render failed; see <code>error</code>. Quota refunded.</td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td>Cancelled via <code>DELETE</code>. Quota refunded.</td>
+</tr>
+</tbody>
+</table>
+            </section>
+
+            <hr>
+            <section id="sizes-durations-fps">
+                <h2>Sizes, durations, fps</h2>
+<ul>
+<li><strong>Sizes</strong> are a fixed preset menu (torch.compile shape set), default
+  <code>1280x704</code>, <code>704x1280</code>, <code>1024x576</code>, <code>768x448</code>. Off-menu sizes are rejected.</li>
+<li><strong>Duration</strong> (<code>seconds</code>) is a <strong>continuous whole-second value</strong> from <code>4</code> to <code>30</code>
+  inclusive (defaults may be tuned server-side; always read <code>GET /v1/videos/models</code>
+  for the live <code>min_seconds</code>/<code>max_seconds</code>). Fractional seconds are rejected. Frame
+  count is derived as <code>24 × seconds + 1</code>.</li>
+<li><strong>fps</strong> is <code>24</code>.</li>
+<li>Every clip includes a <strong>synchronized audio track</strong> (the model generates audio
+  natively).</li>
+</ul>
+<p>Always read <code>GET /v1/videos/models</code> rather than hardcoding these — the preset matrix
+is admin-tunable.</p>
+            </section>
+
+            <hr>
+            <section id="limits-quotas-costs">
+                <h2>Limits, quotas &amp; costs</h2>
+<ul>
+<li><strong>Serialized queue.</strong> One clip renders at a time across the whole service.</li>
+<li><strong>Per-user concurrency cap.</strong> By default <strong>1</strong> in-flight job per user
+  (<code>vid.max_concurrent_jobs_per_user</code>). Submitting while at the cap returns <code>429</code>.</li>
+<li><strong>Per-user storage cap.</strong> Default <strong>50 GB</strong> (<code>vid.user_storage_cap_gb</code>), counting
+  rendered clips <strong>and</strong> uploaded reference images. Being at/over the cap returns
+  <strong><code>507 Insufficient Storage</code></strong> on both <code>POST /v1/videos</code> and <code>POST
+  /v1/videos/assets</code>. The check gates on <em>current</em> usage, so a single in-flight clip
+  can push slightly over; the next submit is then blocked until you delete videos to
+  free space. Use <code>DELETE /v1/videos/{id}</code> to reclaim space.</li>
+<li><strong>Token cost.</strong> Each render reserves tokens up front from your group budget:
+  <code>token_equivalent = seconds × per_second_rate × quality_multiplier ×
+  resolution_multiplier</code> (defaults: <code>per_second_rate</code> 2000; quality <code>draft</code> 0.5 /
+  <code>standard</code> 1.0 / <code>final</code> 2.0; resolution multiplier 1.0 unless configured).
+  Insufficient budget → <code>429</code>. The reservation is <strong>refunded</strong> if the job fails or is
+  cancelled. The charged amount is echoed as <code>usage.token_equivalent</code>.</li>
+</ul>
+            </section>
+
+            <hr>
+            <section id="worked-example-keyframe-guided-clip-end-to-end">
+                <h2>Worked example: keyframe-guided clip, end to end</h2>
+<p>Upload a keyframe → create an image-guided clip → poll → fetch.</p>
+<h3 id="curl">curl</h3>
+<pre><code class="language-bash">BASE=https://mindrouter.example.com
+KEY=your_api_key_here
+
+# 1) Upload a reference image → get an asset id.
+ASSET_ID=$(curl -s -X POST &quot;$BASE/v1/videos/assets&quot; \
+  -H &quot;X-API-Key: $KEY&quot; \
+  -F &quot;image=@./first_frame.png&quot; \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)[&quot;id&quot;])')
+echo &quot;asset id: $ASSET_ID&quot;
+
+# 2) Create an image-guided text-to-video job (202 + job object).
+JOB_ID=$(curl -s -X POST &quot;$BASE/v1/videos&quot; \
+  -H &quot;X-API-Key: $KEY&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &quot;{
+        \&quot;prompt\&quot;: \&quot;a paper boat drifting down a rain-slick gutter at dusk\&quot;,
+        \&quot;size\&quot;: \&quot;1280x704\&quot;,
+        \&quot;seconds\&quot;: 5,
+        \&quot;quality\&quot;: \&quot;standard\&quot;,
+        \&quot;start_image_asset_id\&quot;: $ASSET_ID
+      }&quot; \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)[&quot;id&quot;])')
+echo &quot;job id: $JOB_ID&quot;
+
+# 3) Poll until completed.
+while true; do
+  STATUS=$(curl -s &quot;$BASE/v1/videos/$JOB_ID&quot; -H &quot;X-API-Key: $KEY&quot; \
+    | python3 -c 'import sys,json; print(json.load(sys.stdin)[&quot;status&quot;])')
+  echo &quot;status: $STATUS&quot;
+  [ &quot;$STATUS&quot; = &quot;completed&quot; ] &amp;&amp; break
+  [ &quot;$STATUS&quot; = &quot;failed&quot; ] &amp;&amp; { echo &quot;render failed&quot;; exit 1; }
+  [ &quot;$STATUS&quot; = &quot;cancelled&quot; ] &amp;&amp; { echo &quot;cancelled&quot;; exit 1; }
+  sleep 3
+done
+
+# 4) Fetch the MP4.
+curl -s &quot;$BASE/v1/videos/$JOB_ID/content&quot; -H &quot;X-API-Key: $KEY&quot; -o out.mp4
+echo &quot;saved out.mp4&quot;
+</code></pre>
+<h3 id="python">Python</h3>
+<pre><code class="language-python">import time
+import requests
+
+BASE = &quot;https://mindrouter.example.com&quot;
+KEY = &quot;your_api_key_here&quot;
+HEADERS = {&quot;X-API-Key&quot;: KEY}  # or {&quot;Authorization&quot;: f&quot;Bearer {KEY}&quot;}
+
+# 1) Upload a reference image → asset id.
+with open(&quot;first_frame.png&quot;, &quot;rb&quot;) as fh:
+    r = requests.post(
+        f&quot;{BASE}/v1/videos/assets&quot;,
+        headers=HEADERS,
+        files={&quot;image&quot;: (&quot;first_frame.png&quot;, fh, &quot;image/png&quot;)},
+    )
+r.raise_for_status()
+asset_id = r.json()[&quot;id&quot;]
+print(&quot;asset id:&quot;, asset_id)
+
+# 2) Create an image-guided text-to-video job (returns 202 + job object).
+r = requests.post(
+    f&quot;{BASE}/v1/videos&quot;,
+    headers={**HEADERS, &quot;Content-Type&quot;: &quot;application/json&quot;},
+    json={
+        &quot;prompt&quot;: &quot;a paper boat drifting down a rain-slick gutter at dusk&quot;,
+        &quot;size&quot;: &quot;1280x704&quot;,
+        &quot;seconds&quot;: 5,
+        &quot;quality&quot;: &quot;standard&quot;,
+        &quot;start_image_asset_id&quot;: asset_id,   # first-frame keyframe
+        # &quot;end_image_asset_id&quot;: other_asset_id,  # optional last-frame keyframe
+    },
+)
+r.raise_for_status()
+job = r.json()
+job_id = job[&quot;id&quot;]
+print(&quot;job id:&quot;, job_id, &quot;status:&quot;, job[&quot;status&quot;])
+
+# 3) Poll until terminal.
+while True:
+    job = requests.get(f&quot;{BASE}/v1/videos/{job_id}&quot;, headers=HEADERS).json()
+    print(&quot;status:&quot;, job[&quot;status&quot;], &quot;progress:&quot;, job.get(&quot;progress&quot;))
+    if job[&quot;status&quot;] == &quot;completed&quot;:
+        break
+    if job[&quot;status&quot;] in (&quot;failed&quot;, &quot;cancelled&quot;):
+        raise SystemExit(f&quot;job {job['status']}: {job.get('error')}&quot;)
+    time.sleep(3)
+
+# 4) Fetch the MP4 (streamed; supports Range).
+with requests.get(f&quot;{BASE}/v1/videos/{job_id}/content&quot;, headers=HEADERS, stream=True) as resp:
+    resp.raise_for_status()
+    with open(&quot;out.mp4&quot;, &quot;wb&quot;) as out:
+        for chunk in resp.iter_content(chunk_size=1 &lt;&lt; 16):
+            out.write(chunk)
+print(&quot;saved out.mp4&quot;)
+</code></pre>
+<p>For a <strong>text-only</strong> clip, omit the asset upload and the <code>start_image_asset_id</code> /
+<code>end_image_asset_id</code> fields — everything else is identical.</p>
+            </section>
+
+            <hr>
+            <section id="notes-for-the-consuming-studio-application">
+                <h2>Notes for the consuming (studio) application</h2>
+<ul>
+<li><strong>Multi-shot is your job.</strong> Store the storyboard/timeline yourself, submit each
+  shot as an independent <code>POST /v1/videos</code>, and stitch the returned MP4s (ffmpeg) on
+  your side. MindRouter renders clips; it does not assemble them.</li>
+<li><strong>Coherence across shots.</strong> Generate consistent stills (e.g. via the image API),
+  upload them as assets, and pass them as <code>start_image_asset_id</code> / <code>end_image_asset_id</code>
+  keyframes to anchor each clip.</li>
+<li><strong>Design for a queue.</strong> With one render slot and a default per-user concurrency of
+  1, expect <code>queued</code> waits. Poll with backoff and surface honest progress + ETA.</li>
+<li><strong>Discover, don't hardcode.</strong> Read <code>GET /v1/videos/models</code> for the live size menu,
+  duration range, fps, and qualities.</li>
+</ul>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Architecture - MindRouter</title>
+    <meta name="description" content="Architecture reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#overview">Overview</a></li>
+                <li class="nav-item"><a class="nav-link" href="#system-components">System Components</a></li>
+                <li class="nav-item"><a class="nav-link" href="#data-model">Data Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="#request-flow">Request Flow</a></li>
+                <li class="nav-item"><a class="nav-link" href="#deployment">Deployment</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter Architecture</h1>
+
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/architecture.md" target="_blank" rel="noopener">docs/architecture.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="overview">
+                <h2>Overview</h2>
+<p>MindRouter is a production-ready LLM inference load balancer designed to front heterogeneous backend clusters of Ollama and vLLM inference nodes. It provides a unified API surface compatible with OpenAI, Ollama, and Anthropic clients while implementing fair-share scheduling, quota management, and comprehensive audit logging.</p>
+            </section>
+
+            <hr>
+            <section id="system-components">
+                <h2>System Components</h2>
+<h3 id="1-api-gateway">1. API Gateway</h3>
+<p>The API Gateway is the entry point for all client requests.</p>
+<p><strong>Key Responsibilities:</strong>
+- Request authentication via API keys
+- Request validation and normalization
+- Protocol translation (OpenAI ↔ Ollama ↔ Anthropic ↔ vLLM)
+- Response streaming with low latency
+- Error handling and retry logic</p>
+<p><strong>Endpoints:</strong>
+- <code>/v1/chat/completions</code> - OpenAI-compatible chat
+- <code>/v1/responses</code> - OpenAI Responses API (inbound-only; typed input items and SSE events)
+- <code>/v1/completions</code> - OpenAI-compatible text completions
+- <code>/v1/embeddings</code> - OpenAI-compatible embeddings
+- <code>/v1/rerank</code> - Reranking
+- <code>/v1/score</code> - Scoring
+- <code>/v1/models</code> - List available models
+- <code>/api/chat</code> - Ollama-compatible chat
+- <code>/api/generate</code> - Ollama-compatible generation
+- <code>/api/tags</code> - Ollama-compatible model list
+- <code>/anthropic/v1/messages</code> - Anthropic Messages API compatible (inbound-only)</p>
+<h3 id="2-translation-layer">2. Translation Layer</h3>
+<p>The translation layer converts between different API formats.</p>
+<pre><code>┌─────────────────┐
+│ Client Request  │
+└────────┬────────┘
+         │
+    ┌────▼────┐  ┌─────────┐  ┌────────────┐
+    │OpenAI In│  │Ollama In│  │Anthropic In│
+    └────┬────┘  └────┬────┘  └──────┬─────┘
+         │            │              │
+         └────────────┼──────────────┘
+                      │
+              ┌───────▼───────┐
+              │   Canonical   │
+              │    Schema     │
+              └───────┬───────┘
+                      │
+              ┌───────┴────────┐
+              │                │
+         ┌────▼────┐      ┌────▼─────┐
+         │vLLM Out │      │Ollama Out│
+         └────┬────┘      └────┬─────┘
+              │                │
+              └───────┬────────┘
+                      │
+         ┌────────────▼────────────┐
+         │     Backend Request     │
+         └─────────────────────────┘
+</code></pre>
+<div class="alert alert-secondary">
+<p><strong>Note:</strong> The Anthropic translator is inbound-only. Responses from backends (in OpenAI/Ollama format) are converted back to Anthropic Messages format by <code>AnthropicInTranslator.format_response()</code> and <code>format_stream_event()</code>.</p>
+</div>
+<p><strong>Canonical Schemas:</strong>
+- <code>CanonicalChatRequest</code> - Unified chat format (messages, tools, tool_choice, response_format, etc.)
+- <code>CanonicalMessage</code> - Message with role, content, tool_calls, tool_call_id
+- <code>CanonicalToolCall</code> / <code>CanonicalToolDefinition</code> - Tool calling primitives (arguments stored as JSON strings)
+- <code>CanonicalEmbeddingRequest</code> - Unified embedding format
+- <code>CanonicalStreamChunk</code> - Unified streaming format (including tool call deltas)</p>
+<h3 id="3-fair-share-scheduler">3. Fair-Share Scheduler</h3>
+<p>Implements Weighted Deficit Round Robin (WDRR) for fair resource allocation.</p>
+<p><strong>Key Concepts:</strong>
+- <strong>Share Weights</strong>: Per-group (e.g. faculty=3, staff=2, student=1, admin=10), configured in <code>/admin/groups</code>
+- <strong>Deficit Counters</strong>: Track service debt per user
+- <strong>Burst Credits</strong>: Allow full cluster use when idle
+- <strong>Deprioritization</strong>: Reduce priority for heavy users</p>
+<p><strong>Scheduling Flow:</strong>
+1. Job arrives, compute initial priority
+2. Add to per-user queue
+3. When backend available:
+   - Select user with highest (deficit + burst_credits) / weight
+   - Score eligible backends
+   - Route to best backend
+4. On completion, update deficit counter</p>
+<h3 id="4-backend-registry">4. Backend Registry</h3>
+<p>Manages backend discovery, health, and telemetry. The registry operates on a <strong>Node/Backend separation</strong>: a Node represents a physical GPU server running a sidecar agent, while a Backend is an inference endpoint running on a node.</p>
+<p><strong>Node/Backend Model:</strong>
+- <strong>Node</strong>: Physical server with a sidecar agent, owns GPU devices
+- <strong>Backend</strong>: Inference endpoint (Ollama/vLLM) running on a node, assigned specific GPUs via <code>gpu_indices</code>
+- One sidecar poll per node (deduplicated across backends)
+- Per-backend GPU aggregation uses only assigned GPU subset</p>
+<p><strong>Two-Phase Telemetry Collection:</strong>
+1. <strong>Phase A — Per-node sidecar poll</strong>: Calls each node's sidecar once, upserts GPU device records, stores GPU telemetry, updates node hardware info
+2. <strong>Phase B — Per-backend health poll</strong>: Calls each backend's inference API for health/model/request metrics, computes per-backend GPU utilization from cached node data filtered by <code>gpu_indices</code></p>
+<p><strong>Backend Adapters:</strong>
+- <code>OllamaAdapter</code> - Polls <code>/api/tags</code>, <code>/api/ps</code>, <code>/api/version</code>
+- <code>VLLMAdapter</code> - Polls <code>/v1/models</code>, <code>/health</code>, <code>/metrics</code>
+- <code>SidecarClient</code> - Polls node's <code>/gpu-info</code> for GPU hardware metrics</p>
+<h3 id="4a-gpu-sidecar-agent">4a. GPU Sidecar Agent</h3>
+<p>A lightweight FastAPI service (<code>sidecar/gpu_agent.py</code>) that runs on each physical GPU server. Uses NVIDIA Management Library (pynvml) to expose per-GPU metrics.</p>
+<p><strong>Endpoints:</strong>
+- <code>GET /health</code> - Liveness check, returns GPU count
+- <code>GET /gpu-info</code> - Full GPU metrics (utilization, memory, temperature, power, clocks, processes)</p>
+<p><strong>Deployment:</strong> Runs as a Docker container with <code>--gpus all</code> or directly via Python on each GPU node. Exposes port 8007 by default.</p>
+<h3 id="5-backend-scorer">5. Backend Scorer</h3>
+<p>Multi-factor scoring for backend selection.</p>
+<p><strong>Hard Constraints (must pass):</strong>
+- Model availability
+- Modality support (multimodal, embeddings)
+- Memory fit
+- Capacity available</p>
+<p><strong>Soft Scores (higher = better):</strong>
+- Model already loaded: +100
+- Low GPU utilization: +50
+- Low latency: +40
+- Short queue: +30
+- High throughput: +20 (recent tokens/second)
+- Priority: +N×10 (admin-configured backend preference)</p>
+<h3 id="6-quota-management">6. Quota Management</h3>
+<p>Token-based quota system with group-based defaults.</p>
+<p><strong>Features:</strong>
+- Monthly token budgets
+- Requests per minute (RPM) limits
+- Max concurrent requests
+- Automatic quota reset</p>
+<h3 id="7-audit-logging">7. Audit Logging</h3>
+<p>Complete request/response logging for compliance.</p>
+<p><strong>Logged Data:</strong>
+- Full request content (prompts, messages)
+- Full response content
+- Token usage (actual or estimated)
+- Timing metrics (queue delay, processing time)
+- Scheduling decisions</p>
+            </section>
+
+            <hr>
+            <section id="data-model">
+                <h2>Data Model</h2>
+<pre><code>┌─────────────┐     ┌─────────────┐
+│    User     │────&lt;│   ApiKey    │
+└──────┬──────┘     └─────────────┘
+       │
+       │     ┌─────────────┐
+       ├────&lt;│    Quota    │
+       │     └─────────────┘
+       │
+       │     ┌─────────────┐     ┌─────────────┐
+       └────&lt;│   Request   │────&lt;│  Response   │
+             └──────┬──────┘     └─────────────┘
+                    │
+                    │     ┌─────────────┐
+                    ├────&lt;│  Artifact   │
+                    │     └─────────────┘
+                    │
+                    │     ┌─────────────┐
+                    └────&lt;│ Scheduler   │
+                          │  Decision   │
+                          └─────────────┘
+
+┌─────────────┐     ┌─────────────┐
+│    Node     │────&lt;│  GPUDevice  │
+└──────┬──────┘     └──────┬──────┘
+       │                   │
+       │     ┌─────────────┤
+       │     │  GPUDevice   │
+       │     │  Telemetry   │
+       │     └─────────────┘
+       │
+┌──────┴──────┐     ┌─────────────┐
+│   Backend   │────&lt;│    Model    │
+└──────┬──────┘     └─────────────┘
+       │
+       │     ┌─────────────┐
+       └────&lt;│  Telemetry  │
+             └─────────────┘
+
+Node → Backend: one-to-many (a node can host multiple backends)
+Backend.gpu_indices: JSON list of GPU device indices assigned to this backend
+GPUDevice belongs to Node (not Backend)
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="request-flow">
+                <h2>Request Flow</h2>
+<pre><code>Client Request
+       │
+       ▼
+┌─────────────────┐
+│  Authentication │
+│   (API Key)     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Quota Check     │
+│ Rate Limit      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Translation    │
+│  (→ Canonical)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Create Job     │
+│  Compute Priority│
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Route to       │
+│  Backend        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Proxy Request  │
+│  (Stream if     │
+│   applicable)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Record Audit   │
+│  Update Usage   │
+└────────┬────────┘
+         │
+         ▼
+    Response
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="deployment">
+                <h2>Deployment</h2>
+<h3 id="development">Development</h3>
+<pre><code class="language-bash">docker compose up --build
+</code></pre>
+<h3 id="production-considerations">Production Considerations</h3>
+<ul>
+<li>Use external MariaDB cluster</li>
+<li>Configure Redis for distributed rate limiting</li>
+<li>Mount persistent volume for artifacts</li>
+<li>Set up monitoring (Prometheus/Grafana)</li>
+<li>Configure TLS termination</li>
+<li>Set secure SECRET_KEY</li>
+</ul>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

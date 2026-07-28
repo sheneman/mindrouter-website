@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Image Generation API - MindRouter</title>
+    <meta name="description" content="Image Generation API reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-router"></i> MindRouter
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-arrow-left"></i> Back to Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation.html"><i class="bi bi-book"></i> Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog/">Blog</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#architecture-note-mindrouter-is-a-provider-of-single-shot-primitives">Architecture note: MindRouter is a provider of single-shot primitives</a></li>
+                <li class="nav-item"><a class="nav-link" href="#authentication">Authentication</a></li>
+                <li class="nav-item"><a class="nav-link" href="#endpoint-1-post-v1imagesgenerations-text-to-image">Endpoint 1 — POST /v1/images/generations (text-to-image)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#endpoint-2-post-v1imagesedits-image-to-image-reference-edit">Endpoint 2 — POST /v1/images/edits (image-to-image / reference-edit)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#response-format">Response format</a></li>
+                <li class="nav-item"><a class="nav-link" href="#content-policy-judge-llm-as-judge">Content-policy judge (LLM-as-judge)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#guardrails-admin-config-keys-img">Guardrails &amp; admin config keys (img.)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#error-reference">Error reference</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter Image Generation API</h1>
+<p><em>Last updated: 2026-07-23</em></p>
+<p>Base URL: <code>https://mindrouter.example.com</code></p>
+<p>This is the public reference for MindRouter's <strong>image</strong> generation primitives:
+text-to-image (<code>POST /v1/images/generations</code>) and image-to-image /
+reference-edit (<code>POST /v1/images/edits</code>). Both endpoints are
+OpenAI-compatible (they mirror the OpenAI Images API request/response shapes,
+with a few FLUX-specific extensions).</p>
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/images-api.md" target="_blank" rel="noopener">docs/images-api.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="architecture-note-mindrouter-is-a-provider-of-single-shot-primitives">
+                <h2>Architecture note: MindRouter is a provider of single-shot primitives</h2>
+<p>MindRouter produces <strong>one thing per call</strong> — here, one batch of still images
+from one prompt. It does <strong>not</strong> do multi-shot assembly, storyboard layout,
+collage/montage stitching, timeline editing, or cross-image character
+consistency. That orchestration is the job of the <em>separate</em> studio /
+storyboarding app that consumes these APIs and does its own composition. Treat
+each <code>/v1/images/*</code> call as a stateless render of a single prompt; keep any
+multi-image narrative logic in your app.</p>
+            </section>
+
+            <hr>
+            <section id="authentication">
+                <h2>Authentication</h2>
+<p>Every request requires an API key, sent as <strong>either</strong> header:</p>
+<pre><code>X-API-Key: &lt;your-key&gt;
+</code></pre>
+<p>or</p>
+<pre><code>Authorization: Bearer &lt;your-key&gt;
+</code></pre>
+<p>Additional account gating (both must be true or the request is rejected):</p>
+<ul>
+<li>The image subsystem must be enabled globally (admin key <code>img.enabled</code>,
+  default <code>true</code>). If disabled: <strong>503 Service Unavailable</strong> —
+  <code>"Image generation is currently disabled"</code>.</li>
+<li>Your account must have image generation enabled
+  (<code>user.image_generation_enabled</code>). If not: <strong>403 Forbidden</strong> —
+  <code>"Image generation is not enabled for your account. Contact an
+  administrator."</code></li>
+</ul>
+            </section>
+
+            <hr>
+            <section id="endpoint-1-post-v1imagesgenerations-text-to-image">
+                <h2>Endpoint 1 — <code>POST /v1/images/generations</code> (text-to-image)</h2>
+<p>Generate one or more images from a text prompt. Request body is <strong>JSON</strong>
+(<code>Content-Type: application/json</code>).</p>
+<h3 id="request-fields">Request fields</h3>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prompt</code></td>
+<td>string</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>The text description. Empty/missing → 400.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>img.default_model</code> (<code>black-forest-labs/FLUX.2-dev</code>)</td>
+<td>Must resolve to a known image model or → 404 <code>model_not_found</code>. Aliases are resolved.</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td>integer</td>
+<td>no</td>
+<td><code>1</code></td>
+<td>Number of images. Clamped to <code>img.max_n</code> (default <code>4</code>) — values above the cap are silently reduced, not rejected.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>img.default_size</code> (<code>1024x1024</code>)</td>
+<td><code>WIDTHxHEIGHT</code>. Must be in <code>img.allowed_sizes</code> (see guardrails) or → 400. Also bounded by <code>img.max_width</code> / <code>img.max_height</code>.</td>
+</tr>
+<tr>
+<td><code>quality</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"standard"</code></td>
+<td><code>"standard"</code> or <code>"hd"</code>. Passed through to the backend.</td>
+</tr>
+<tr>
+<td><code>style</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Optional, e.g. <code>"vivid"</code> / <code>"natural"</code>. Passed through only if set.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"url"</code></td>
+<td><code>"url"</code> or <code>"b64_json"</code> — see <a href="#response-format">Response format</a>.</td>
+</tr>
+<tr>
+<td><code>num_inference_steps</code></td>
+<td>integer</td>
+<td>no</td>
+<td><code>img.default_steps</code> (<code>20</code>)</td>
+<td>Diffusion steps. Clamped to <code>img.max_steps</code> (default <code>50</code>).</td>
+</tr>
+<tr>
+<td><code>guidance_scale</code></td>
+<td>float</td>
+<td>no</td>
+<td><code>img.default_guidance_scale</code> (<code>3.5</code>)</td>
+<td>Classifier-free guidance strength.</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>integer</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Fixed seed for reproducibility. Omit for random.</td>
+</tr>
+<tr>
+<td><code>user</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Opaque end-user identifier for your own auditing.</td>
+</tr>
+</tbody>
+</table>
+<div class="alert alert-secondary">
+<p>Defaults shown in parentheses are the shipped fallback values. An
+administrator can change any <code>img.*</code> key, so treat them as defaults, not
+guarantees. Discover the currently-allowed sizes from a 400 error's message
+or from your admin.</p>
+</div>
+<h3 id="example-curl">Example — curl</h3>
+<pre><code class="language-bash">curl https://mindrouter.example.com/v1/images/generations \
+  -H &quot;X-API-Key: $MINDROUTER_API_KEY&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;model&quot;: &quot;black-forest-labs/FLUX.2-dev&quot;,
+    &quot;prompt&quot;: &quot;a lighthouse on a rocky coast at golden hour, cinematic&quot;,
+    &quot;n&quot;: 1,
+    &quot;size&quot;: &quot;1024x1024&quot;,
+    &quot;num_inference_steps&quot;: 20,
+    &quot;guidance_scale&quot;: 3.5,
+    &quot;response_format&quot;: &quot;b64_json&quot;
+  }'
+</code></pre>
+<h3 id="example-python">Example — Python</h3>
+<pre><code class="language-python">import base64
+import requests
+
+BASE = &quot;https://mindrouter.example.com&quot;
+API_KEY = &quot;...&quot;  # your MindRouter API key
+
+resp = requests.post(
+    f&quot;{BASE}/v1/images/generations&quot;,
+    headers={&quot;X-API-Key&quot;: API_KEY, &quot;Content-Type&quot;: &quot;application/json&quot;},
+    json={
+        &quot;model&quot;: &quot;black-forest-labs/FLUX.2-dev&quot;,
+        &quot;prompt&quot;: &quot;a lighthouse on a rocky coast at golden hour, cinematic&quot;,
+        &quot;size&quot;: &quot;1024x1024&quot;,
+        &quot;num_inference_steps&quot;: 20,
+        &quot;response_format&quot;: &quot;b64_json&quot;,
+    },
+    timeout=180,
+)
+resp.raise_for_status()
+data = resp.json()
+
+# b64_json response: decode and save
+b64 = data[&quot;data&quot;][0][&quot;b64_json&quot;]
+with open(&quot;out.png&quot;, &quot;wb&quot;) as f:
+    f.write(base64.b64decode(b64))
+</code></pre>
+<h3 id="example-javascript-fetch">Example — JavaScript (fetch)</h3>
+<pre><code class="language-javascript">const BASE = &quot;https://mindrouter.example.com&quot;;
+const res = await fetch(`${BASE}/v1/images/generations`, {
+  method: &quot;POST&quot;,
+  headers: {
+    &quot;X-API-Key&quot;: process.env.MINDROUTER_API_KEY,
+    &quot;Content-Type&quot;: &quot;application/json&quot;,
+  },
+  body: JSON.stringify({
+    model: &quot;black-forest-labs/FLUX.2-dev&quot;,
+    prompt: &quot;a lighthouse on a rocky coast at golden hour, cinematic&quot;,
+    size: &quot;1024x1024&quot;,
+    response_format: &quot;b64_json&quot;,
+  }),
+});
+if (!res.ok) throw new Error(`image generation failed: ${res.status}`);
+const data = await res.json();
+const b64 = data.data[0].b64_json; // decode as needed
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="endpoint-2-post-v1imagesedits-image-to-image-reference-edit">
+                <h2>Endpoint 2 — <code>POST /v1/images/edits</code> (image-to-image / reference-edit)</h2>
+<p>Condition generation on <strong>one or more reference images</strong>. This is the endpoint
+to use for "put glasses on this person", "restyle this scene", "change the
+background", etc. Request is <strong><code>multipart/form-data</code></strong> (because it carries file
+uploads).</p>
+<h3 id="request-fields-form-fields">Request fields (form fields)</h3>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image</code></td>
+<td>file (repeated)</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>1 to <strong>4</strong> image files. Each part must be named <code>image</code>; repeat the part to send several. See the <a href="#reference-image-cap">reference-image cap</a>.</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>string</td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>The edit instruction. Empty/missing → 400.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>img.default_model</code></td>
+<td>Same resolution/validation as txt2img.</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td>integer</td>
+<td>no</td>
+<td><code>1</code></td>
+<td>Clamped to <code>img.max_n</code> (default <code>4</code>).</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>img.default_size</code></td>
+<td>Same allowed-sizes / max-dimension guardrails as txt2img.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>"url"</code></td>
+<td><code>"url"</code> or <code>"b64_json"</code>.</td>
+</tr>
+<tr>
+<td><code>num_inference_steps</code></td>
+<td>integer</td>
+<td>no</td>
+<td><strong><code>img.edit_default_steps</code> (<code>8</code>)</strong></td>
+<td>Edits default to <strong>8 steps</strong>, not 20 — see <a href="#8-step-edit-default">8-step edit default</a>. Still clamped to <code>img.max_steps</code>.</td>
+</tr>
+<tr>
+<td><code>guidance_scale</code></td>
+<td>float</td>
+<td>no</td>
+<td><code>img.default_guidance_scale</code> (<code>3.5</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>integer</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>strength</code></td>
+<td>float</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Accepted for forward-compat but <strong>ignored by FLUX.2 Klein</strong> — see <a href="#strength-is-ignored-on-flux2-klein">strength note</a>.</td>
+</tr>
+<tr>
+<td><code>user</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>null</code></td>
+<td>Sent as form field named <code>user</code>. Opaque end-user id.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reference-image-cap">Reference-image cap</h3>
+<p>At most <strong>4</strong> reference images per request (server constant <code>_MAX_EDIT_IMAGES</code>,
+mirroring the diffusion backend's <code>MAX_REF_IMAGES</code> VRAM protection). Sending
+more → <strong>400</strong> <code>"at most 4 reference image(s) allowed (got N)"</code>.</p>
+<p>Each file must have an <code>image/*</code> content type (→ 400 <code>"each 'image' must be an
+image file"</code>) and must be under <code>img.max_image_upload_mb</code> (default <strong>10 MB</strong>)
+or → 400 <code>"reference image exceeds 10MB"</code>.</p>
+<h3 id="8-step-edit-default">8-step edit default</h3>
+<p>FLUX.2 Klein reference-edits are structure-preserving and look better with
+<strong>fewer</strong> diffusion steps. When you do <strong>not</strong> pass <code>num_inference_steps</code>, edits
+default to <code>img.edit_default_steps</code> (<strong>8</strong>), whereas plain text-to-image
+defaults to <code>img.default_steps</code> (<strong>20</strong>). Pass an explicit
+<code>num_inference_steps</code> to override.</p>
+<h3 id="strength-is-ignored-on-flux2-klein"><code>strength</code> is ignored on FLUX.2 Klein</h3>
+<p>The <code>strength</code> field (the usual img2img denoising-strength knob) is accepted and
+carried through the canonical request for forward-compatibility, but <strong>FLUX.2
+Klein — a distilled, structure-preserving edit model — ignores it</strong>. Do not rely
+on <code>strength</code> to control how much the reference is preserved on that model;
+control the result through the prompt and step count instead.</p>
+<h3 id="example-curl-multipart">Example — curl (multipart)</h3>
+<pre><code class="language-bash">curl https://mindrouter.example.com/v1/images/edits \
+  -H &quot;X-API-Key: $MINDROUTER_API_KEY&quot; \
+  -F &quot;image=@portrait.png;type=image/png&quot; \
+  -F &quot;prompt=add round wire-frame glasses to this man, keep everything else&quot; \
+  -F &quot;size=1024x1024&quot; \
+  -F &quot;response_format=b64_json&quot;
+</code></pre>
+<p>Two reference images (repeat the <code>image</code> part):</p>
+<pre><code class="language-bash">curl https://mindrouter.example.com/v1/images/edits \
+  -H &quot;X-API-Key: $MINDROUTER_API_KEY&quot; \
+  -F &quot;image=@subject.png;type=image/png&quot; \
+  -F &quot;image=@style_ref.png;type=image/png&quot; \
+  -F &quot;prompt=render the subject in the painterly style of the second image&quot; \
+  -F &quot;response_format=b64_json&quot;
+</code></pre>
+<h3 id="example-python">Example — Python</h3>
+<pre><code class="language-python">import base64
+import requests
+
+BASE = &quot;https://mindrouter.example.com&quot;
+API_KEY = &quot;...&quot;
+
+with open(&quot;portrait.png&quot;, &quot;rb&quot;) as fh:
+    files = [(&quot;image&quot;, (&quot;portrait.png&quot;, fh, &quot;image/png&quot;))]
+    data = {
+        &quot;prompt&quot;: &quot;add round wire-frame glasses to this man&quot;,
+        &quot;size&quot;: &quot;1024x1024&quot;,
+        &quot;response_format&quot;: &quot;b64_json&quot;,
+        # num_inference_steps omitted -&gt; defaults to 8 for edits
+    }
+    resp = requests.post(
+        f&quot;{BASE}/v1/images/edits&quot;,
+        headers={&quot;X-API-Key&quot;: API_KEY},  # do NOT set Content-Type; requests sets the multipart boundary
+        files=files,
+        data=data,
+        timeout=180,
+    )
+
+resp.raise_for_status()
+out = resp.json()
+with open(&quot;edited.png&quot;, &quot;wb&quot;) as f:
+    f.write(base64.b64decode(out[&quot;data&quot;][0][&quot;b64_json&quot;]))
+</code></pre>
+<h3 id="example-javascript-fetch-formdata">Example — JavaScript (fetch + FormData)</h3>
+<pre><code class="language-javascript">const BASE = &quot;https://mindrouter.example.com&quot;;
+const form = new FormData();
+form.append(&quot;image&quot;, fileBlob, &quot;portrait.png&quot;); // fileBlob: a File/Blob of type image/*
+form.append(&quot;prompt&quot;, &quot;add round wire-frame glasses to this man&quot;);
+form.append(&quot;size&quot;, &quot;1024x1024&quot;);
+form.append(&quot;response_format&quot;, &quot;b64_json&quot;);
+
+const res = await fetch(`${BASE}/v1/images/edits`, {
+  method: &quot;POST&quot;,
+  headers: { &quot;X-API-Key&quot;: process.env.MINDROUTER_API_KEY }, // let the browser set the multipart Content-Type
+  body: form,
+});
+if (!res.ok) throw new Error(`edit failed: ${res.status}`);
+const data = await res.json();
+const b64 = data.data[0].b64_json;
+</code></pre>
+            </section>
+
+            <hr>
+            <section id="response-format">
+                <h2>Response format</h2>
+<p>Both endpoints return the same JSON shape (HTTP 200). It is OpenAI-compatible,
+plus two MindRouter metadata fields.</p>
+<pre><code class="language-json">{
+  &quot;created&quot;: 1753280000,
+  &quot;data&quot;: [
+    {
+      &quot;url&quot;: &quot;https://.../generated.png&quot;,
+      &quot;b64_json&quot;: null,
+      &quot;revised_prompt&quot;: null
+    }
+  ],
+  &quot;backend_id&quot;: 45,
+  &quot;processing_time_ms&quot;: 4213
+}
+</code></pre>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>created</code></td>
+<td>integer</td>
+<td>Unix timestamp.</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>array</td>
+<td>One entry per generated image (<code>n</code> entries).</td>
+</tr>
+<tr>
+<td><code>data[].url</code></td>
+<td>string | null</td>
+<td>Populated when <code>response_format</code> is <code>"url"</code>.</td>
+</tr>
+<tr>
+<td><code>data[].b64_json</code></td>
+<td>string | null</td>
+<td>Base64 PNG, populated when <code>response_format</code> is <code>"b64_json"</code>.</td>
+</tr>
+<tr>
+<td><code>data[].revised_prompt</code></td>
+<td>string | null</td>
+<td>Present only if the backend rewrote the prompt.</td>
+</tr>
+<tr>
+<td><code>backend_id</code></td>
+<td>integer</td>
+<td>MindRouter metadata — which backend served it.</td>
+</tr>
+<tr>
+<td><code>processing_time_ms</code></td>
+<td>integer</td>
+<td>MindRouter metadata — server-side render time.</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>response_format</code>:</strong>
+- <code>"url"</code> (default for the public API) — <code>url</code> is set, <code>b64_json</code> is null.
+- <code>"b64_json"</code> — <code>b64_json</code> holds a base64-encoded PNG; <code>url</code> is null. Use this
+  when you want the bytes inline without a second fetch.</p>
+            </section>
+
+            <hr>
+            <section id="content-policy-judge-llm-as-judge">
+                <h2>Content-policy judge (LLM-as-judge)</h2>
+<p>If an administrator has configured a policy (<code>img.policy</code> non-empty), <strong>every</strong>
+prompt on both endpoints is screened by an LLM judge <strong>before</strong> any image is
+generated.</p>
+<ul>
+<li><strong>Models:</strong> primary judge <code>img.judge_model</code>, optional fallback
+  <code>img.judge_model_secondary</code>. If the primary errors, the secondary is tried.</li>
+<li><strong>Fail-closed:</strong> if no judge model is reachable / both error, the request is
+  <strong>denied</strong> (not silently allowed).</li>
+<li><strong>Injection-resistant:</strong> the prompt is passed to the judge inside delimited
+  <code>&lt;PROMPT&gt;</code> tags and the judge is instructed to ignore any instructions inside
+  it. You cannot "talk past" the policy from within the prompt.</li>
+<li><strong>Ambiguity → FAIL:</strong> the judge is told to err on the side of denial for
+  ambiguous prompts (except under the edit exemption below).</li>
+</ul>
+<h3 id="edit-aware-exemption">Edit-aware exemption</h3>
+<p>The judge is told <strong>by the system</strong> (based on whether reference images were
+attached — a signal that cannot be spoofed from prompt text) when a request is
+an <strong>edit</strong>. For edits, <strong>deictic references</strong> like "this man", "the person",
+"the image", or "their shirt" refer to the reference image the judge cannot see
+and are <strong>expected</strong> — the judge must <strong>not</strong> FAIL such prompts merely as
+"ambiguous" or for "not providing a description". It still applies the full
+policy to the described transformation and its likely resulting image. This is
+why <code>/v1/images/edits</code> accepts natural edit phrasing that plain text-to-image
+prompts would need to spell out.</p>
+<h3 id="denial-response">Denial response</h3>
+<p>A blocked prompt returns <strong>400</strong> with:</p>
+<pre><code class="language-json">{
+  &quot;detail&quot;: {
+    &quot;error&quot;: {
+      &quot;message&quot;: &quot;Your image request was denied by content policy: &lt;reason&gt;&quot;,
+      &quot;type&quot;: &quot;content_policy_violation&quot;,
+      &quot;code&quot;: &quot;policy_violation&quot;
+    }
+  }
+}
+</code></pre>
+<p>Denied requests are recorded (status <code>FAILED</code>, <code>error_code=policy_violation</code>)
+for auditing.</p>
+            </section>
+
+            <hr>
+            <section id="guardrails-admin-config-keys-img">
+                <h2>Guardrails &amp; admin config keys (<code>img.*</code>)</h2>
+<p>All of these are admin-tunable config keys. Shipped defaults in parentheses.</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>img.enabled</code></td>
+<td><code>true</code></td>
+<td>Global on/off. <code>false</code> → 503 on every request.</td>
+</tr>
+<tr>
+<td><code>img.default_model</code></td>
+<td><code>black-forest-labs/FLUX.2-dev</code></td>
+<td>Model used when <code>model</code> is omitted.</td>
+</tr>
+<tr>
+<td><code>img.default_size</code></td>
+<td><code>1024x1024</code></td>
+<td>Size used when <code>size</code> is omitted.</td>
+</tr>
+<tr>
+<td><code>img.allowed_sizes</code></td>
+<td><code>512x512,768x768,1024x1024,1024x768,768x1024</code></td>
+<td>Comma list; <code>size</code> not in this list → 400.</td>
+</tr>
+<tr>
+<td><code>img.max_width</code></td>
+<td><code>1024</code></td>
+<td>Hard width cap; exceeded → 400.</td>
+</tr>
+<tr>
+<td><code>img.max_height</code></td>
+<td><code>1024</code></td>
+<td>Hard height cap; exceeded → 400.</td>
+</tr>
+<tr>
+<td><code>img.default_steps</code></td>
+<td><code>20</code></td>
+<td>Default <code>num_inference_steps</code> for <strong>text-to-image</strong>.</td>
+</tr>
+<tr>
+<td><code>img.edit_default_steps</code></td>
+<td><code>8</code></td>
+<td>Default <code>num_inference_steps</code> for <strong>edits</strong>.</td>
+</tr>
+<tr>
+<td><code>img.max_steps</code></td>
+<td><code>50</code></td>
+<td>Steps above this are silently clamped down.</td>
+</tr>
+<tr>
+<td><code>img.default_guidance_scale</code></td>
+<td><code>3.5</code></td>
+<td>Default <code>guidance_scale</code>.</td>
+</tr>
+<tr>
+<td><code>img.max_n</code></td>
+<td><code>4</code></td>
+<td><code>n</code> above this is silently clamped down.</td>
+</tr>
+<tr>
+<td><code>img.max_image_upload_mb</code></td>
+<td><code>10</code></td>
+<td>Per-reference-image size cap (edits only); exceeded → 400.</td>
+</tr>
+<tr>
+<td><code>img.policy</code></td>
+<td><code>""</code></td>
+<td>Policy text; empty disables the judge.</td>
+</tr>
+<tr>
+<td><code>img.judge_model</code></td>
+<td><code>""</code></td>
+<td>Primary judge model.</td>
+</tr>
+<tr>
+<td><code>img.judge_model_secondary</code></td>
+<td><code>""</code></td>
+<td>Fallback judge model.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Clamp vs. reject:</strong> <code>n</code> and <code>num_inference_steps</code> above their caps are
+<strong>silently clamped</strong> (the request still succeeds with the capped value). <code>size</code>
+outside <code>img.allowed_sizes</code> or beyond <code>img.max_width</code>/<code>img.max_height</code>, and
+oversized/too-many reference images, are <strong>rejected with 400</strong>.</p>
+            </section>
+
+            <hr>
+            <section id="error-reference">
+                <h2>Error reference</h2>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>HTTP</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td>Invalid JSON body; missing <code>prompt</code>; disallowed <code>size</code>; dimensions over max; &gt; 4 reference images; non-image upload; reference image over size cap; <strong>content-policy denial</strong> (<code>content_policy_violation</code>).</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Missing / invalid API key.</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Image generation not enabled for your account.</td>
+</tr>
+<tr>
+<td>404</td>
+<td><code>model</code> does not resolve to a known image model (<code>model_not_found</code>).</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Image subsystem globally disabled (<code>img.enabled=false</code>).</td>
+</tr>
+</tbody>
+</table>
+<div class="alert alert-secondary">
+<p>Note: <code>/v1/images/generations</code> returns most 4xx errors in the standard
+<code>{"detail": ...}</code> FastAPI envelope; policy denials nest an OpenAI-style
+<code>{"error": {...}}</code> inside <code>detail</code>. Read <code>detail</code> first, then <code>detail.error</code>
+if present.</p>
+</div>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>
