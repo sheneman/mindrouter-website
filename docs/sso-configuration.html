@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SSO Configuration - MindRouter</title>
+    <meta name="description" content="SSO Configuration reference for MindRouter, the open-source LLM inference load balancer.">
+    <script>
+    (function() {
+        var t = localStorage.getItem('mr-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+<style>
+    .docs-sidebar {
+        background: var(--mr-sidebar-bg, #f8f9fa);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--mr-border-color, #dee2e6);
+    }
+    .docs-sidebar .nav-link {
+        padding: 0.3rem 1rem;
+        font-size: 0.875rem;
+        color: var(--mr-sidebar-text, #495057);
+    }
+    .docs-sidebar .nav-link:hover,
+    .docs-sidebar .nav-link.active {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+    .docs-content h2 {
+        padding-top: 1rem;
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--mr-border-color, #dee2e6);
+        padding-bottom: 0.5rem;
+    }
+    .docs-content h3 { margin-top: 1.5rem; }
+    .docs-content h4 { margin-top: 1.25rem; font-size: 1.05rem; font-weight: 600; }
+    .docs-content pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    .docs-content pre code { color: inherit; }
+    .docs-content table { margin-bottom: 1rem; }
+    .docs-content table code { white-space: nowrap; }
+    .docs-content section:first-of-type h2 { margin-top: 0; }
+    .docs-content .alert p:last-child { margin-bottom: 0; }
+    .arch-diagram {
+        font-family: monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        white-space: pre;
+    }
+</style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class="bi bi-router"></i> MindRouter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#telemetry">Telemetry</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/configurator.html"><i class="bi bi-sliders"></i> Configurator</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/documentation.html" aria-current="page">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/blog/">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#cite">Cite</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/ui-insight/MindRouter" target="_blank" rel="noopener"><i class="bi bi-github"></i> GitHub</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="theme-toggle nav-link" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-sun-fill"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="main-content">
+<div class="container-fluid py-0">
+    <div class="row">
+        <!-- Sidebar TOC -->
+        <nav class="col-md-2 docs-sidebar py-3" aria-label="Documentation navigation">
+            <h6 class="px-3 text-muted mb-3"><i class="bi bi-book"></i> Contents</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#overview">Overview</a></li>
+                <li class="nav-item"><a class="nav-link" href="#azure-ad-entra-id">Azure AD / Entra ID</a></li>
+                <li class="nav-item"><a class="nav-link" href="#google">Google</a></li>
+                <li class="nav-item"><a class="nav-link" href="#generic-oidc-okta-keycloak-auth0">Generic OIDC (Okta, Keycloak, Auth0, ...)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#incommon-via-cilogon-recommended-incommon-path">InCommon via CILogon (recommended InCommon path)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#native-saml-20-shibboleth-idp-adfs">Native SAML 2.0 (Shibboleth IdP, ADFS)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#jit-provisioning-and-account-linking">JIT provisioning and account linking</a></li>
+                <li class="nav-item"><a class="nav-link" href="#login-button-labels-branding-tie-in">Login button labels (branding tie-in)</a></li>
+                <li class="nav-item"><a class="nav-link" href="#environment-variable-reference">Environment variable reference</a></li>
+                <li class="nav-item"><a class="nav-link" href="#deployment-reminder">Deployment reminder</a></li>
+                <li class="nav-item"><a class="nav-link" href="#security-notes">Security notes</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="col-md-10 py-4 px-4 docs-content">
+            <p class="mb-3"><a href="/documentation.html" class="text-decoration-none" style="font-size:0.85rem;">&larr; MindRouter Documentation</a></p>
+            <h1 class="mb-3"><i class="bi bi-book"></i> MindRouter SSO Configuration (Administrator Guide)</h1>
+<p><strong>Last updated: 2026-07-29</strong></p>
+<p>This guide covers configuring single sign-on for the MindRouter dashboard. It is
+grounded in the actual implementation:</p>
+<ul>
+<li>Settings: <code>backend/app/settings.py</code> (the <code>azure_ad_*</code>, <code>google_sso_*</code>,
+  <code>oidc_sso_*</code>, <code>saml_*</code> fields and the <code>*_enabled</code> properties)</li>
+<li>Provider registry + routes: <code>backend/app/dashboard/sso/registry.py</code></li>
+<li>OIDC driver (Google + generic): <code>backend/app/dashboard/sso/oidc.py</code></li>
+<li>SAML 2.0 SP driver: <code>backend/app/dashboard/sso/saml.py</code></li>
+<li>Shared JIT provisioning: <code>backend/app/dashboard/sso/base.py</code></li>
+<li>Legacy Azure AD driver (own routes, shared linking rule as of 2.9.0):
+  <code>backend/app/dashboard/azure_auth.py</code></li>
+</ul>
+            <p class="text-muted" style="font-size:0.85rem;"><i class="bi bi-git"></i> Mirrored from <a href="https://github.com/ui-insight/MindRouter/blob/main/docs/sso-configuration.md" target="_blank" rel="noopener">docs/sso-configuration.md</a> in the MindRouter repository. Example hostnames are placeholders — substitute your own deployment.</p>
+            <hr>
+
+            <section id="overview">
+                <h2>Overview</h2>
+<ul>
+<li><strong>Providers are enabled purely by environment variables.</strong> There is no admin-UI
+  toggle. A provider is "on" when its required variables are set (see the
+  per-provider enablement rules below); it is "off" when they are unset. No code
+  changes or feature flags involved.</li>
+<li><strong>Any subset can be enabled simultaneously.</strong> Azure AD, Google, generic OIDC,
+  and SAML are independent. The login page renders <strong>one button per enabled
+  provider</strong>, in this fixed order: Azure AD, SAML, generic OIDC, Google.</li>
+<li><strong>Local username/password accounts are always available.</strong> SSO never disables
+  the local login form; SSO buttons appear alongside it.</li>
+<li><strong>Config is process-level.</strong> <code>get_settings()</code> is <code>@lru_cache</code>d — each worker
+  reads the environment once at startup. OIDC discovery documents and SAML IdP
+  metadata are also cached in-process (1 hour TTL, per worker). After changing
+  any SSO env var, <strong>restart the app</strong> (<code>docker compose up -d</code> recreates the
+  container); do not expect a live reload.</li>
+</ul>
+<p>Enablement rules (from the <code>settings.py</code> properties):</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Provider</th>
+<th>Enabled when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Azure AD</td>
+<td><code>AZURE_AD_CLIENT_ID</code> <strong>and</strong> <code>AZURE_AD_TENANT_ID</code> set (secret is still required for the token exchange to succeed)</td>
+</tr>
+<tr>
+<td>Google</td>
+<td><code>GOOGLE_SSO_CLIENT_ID</code> <strong>and</strong> <code>GOOGLE_SSO_CLIENT_SECRET</code> set</td>
+</tr>
+<tr>
+<td>Generic OIDC</td>
+<td><code>OIDC_SSO_ISSUER</code> <strong>and</strong> <code>OIDC_SSO_CLIENT_ID</code> <strong>and</strong> <code>OIDC_SSO_CLIENT_SECRET</code> set</td>
+</tr>
+<tr>
+<td>SAML</td>
+<td><code>SAML_SP_ENTITY_ID</code> <strong>and</strong> (<code>SAML_IDP_METADATA_URL</code> <strong>or</strong> all three of <code>SAML_IDP_ENTITY_ID</code> / <code>SAML_IDP_SSO_URL</code> / <code>SAML_IDP_X509_CERT</code>) set</td>
+</tr>
+</tbody>
+</table>
+            </section>
+
+            <hr>
+            <section id="azure-ad-entra-id">
+                <h2>Azure AD / Entra ID</h2>
+<p>The original MindRouter SSO provider. It keeps its own routes in
+<code>azure_auth.py</code>, its own <code>azure_oid</code> identity column, and its <code>jobTitle</code> group
+mapping, and appears in the new registry only as a login-button descriptor.</p>
+<p><strong>Changed in 2.9.0:</strong> its email-linking fallback now enforces the same
+unclaimed-account-only rule as the shared driver (see <em>JIT provisioning and
+account linking</em>). The one difference an operator can notice: an Azure login
+whose email matches an account carrying a <strong>different</strong> <code>azure_oid</code> is now
+refused (logged as <code>sso_email_link_refused</code>) instead of silently rebinding that
+account to the new object id. This is rare — the Entra object id is stable.
+Genuinely unclaimed accounts (no <code>azure_oid</code>, no <code>sso_provider</code> — e.g. local
+password accounts) still link exactly as before.</p>
+<p><strong>Routes:</strong> <code>GET /login/azure</code> (start), <code>GET /login/azure/authorized</code> (callback).</p>
+<p><strong>IdP-side setup (Azure portal → App registrations):</strong></p>
+<ol>
+<li>Register a web application in your tenant.</li>
+<li>Add a <strong>Web redirect URI</strong>: <code>https://&lt;your-mindrouter-host&gt;/login/azure/authorized</code>.</li>
+<li>Create a client secret.</li>
+<li>Grant delegated Microsoft Graph permission <code>User.Read</code> (the driver requests
+   scopes <code>openid profile email User.Read</code> and reads the profile from
+   <code>https://graph.microsoft.com/v1.0/me</code>).</li>
+</ol>
+<p><strong>MindRouter-side env vars:</strong></p>
+<pre><code class="language-bash">AZURE_AD_CLIENT_ID=&lt;application (client) id&gt;
+AZURE_AD_CLIENT_SECRET=&lt;client secret value&gt;
+AZURE_AD_TENANT_ID=&lt;directory (tenant) id&gt;
+AZURE_AD_REDIRECT_URI=https://&lt;your-mindrouter-host&gt;/login/azure/authorized
+</code></pre>
+<p>Unlike the newer providers, the Azure redirect URI is <strong>not</strong> derived from the
+request — <code>AZURE_AD_REDIRECT_URI</code> must be set to the full absolute URL and must
+match the app registration exactly.</p>
+<p><strong>Group mapping via job title</strong> (Azure-only behavior, in
+<code>_map_job_title_to_group()</code>): for a brand-new user, the Graph <code>jobTitle</code> is
+matched case-insensitively — contains "student" → group <code>students</code>, contains
+"faculty" or "professor" → <code>faculty</code>, contains "staff" → <code>staff</code>; anything else
+(or no title) → <code>AZURE_AD_DEFAULT_GROUP</code> (default <code>other</code>). The group name also
+maps to the user's role (<code>students</code>→STUDENT, <code>faculty</code>→FACULTY, <code>staff</code>→STAFF,
+<code>admin</code>→ADMIN). Graph <code>department</code> and <code>officeLocation</code> populate the user's
+department/college fields.</p>
+            </section>
+
+            <hr>
+            <section id="google">
+                <h2>Google</h2>
+<p>OIDC authorization-code flow against <code>https://accounts.google.com</code> (hard-coded
+issuer), handled by the shared driver in <code>sso/oidc.py</code>.</p>
+<p><strong>Routes:</strong> <code>GET /login/google</code>, <code>GET /login/google/authorized</code>.</p>
+<p><strong>IdP-side setup (Google Cloud console → APIs &amp; Services → Credentials):</strong></p>
+<ol>
+<li>Create an <strong>OAuth client ID</strong> of type <em>Web application</em>.</li>
+<li>Add authorized redirect URI: <code>https://&lt;your-mindrouter-host&gt;/login/google/authorized</code>.</li>
+<li>Configure the OAuth consent screen for your organization.</li>
+</ol>
+<p><strong>MindRouter-side env vars:</strong></p>
+<pre><code class="language-bash">GOOGLE_SSO_CLIENT_ID=&lt;client id&gt;.apps.googleusercontent.com
+GOOGLE_SSO_CLIENT_SECRET=&lt;client secret&gt;
+# Optional — defaults to &lt;APP_BASE_URL&gt;/login/google/authorized:
+GOOGLE_SSO_REDIRECT_URI=https://&lt;your-mindrouter-host&gt;/login/google/authorized
+# Optional — restrict sign-in to one Google Workspace domain:
+GOOGLE_SSO_HOSTED_DOMAIN=example.edu
+GOOGLE_SSO_DEFAULT_GROUP=other
+</code></pre>
+<p><code>GOOGLE_SSO_HOSTED_DOMAIN</code> does two things: it passes <code>hd=&lt;domain&gt;</code> on the
+authorization request (Google pre-filters the account picker) <strong>and</strong> the
+callback rejects any profile whose <code>hd</code> claim does not match — so it is
+enforced server-side, not just cosmetically. Sign-in is rejected when the IdP
+sends <code>email_verified</code> and it is not true (string forms like <code>"false"</code> count as
+unverified); an IdP that omits the claim entirely is trusted.</p>
+<p>The login button is always labeled <strong>"Sign in with Google"</strong>.</p>
+            </section>
+
+            <hr>
+            <section id="generic-oidc-okta-keycloak-auth0">
+                <h2>Generic OIDC (Okta, Keycloak, Auth0, ...)</h2>
+<p>Any spec-compliant OIDC IdP works. Endpoints are taken from the issuer's
+discovery document at <code>&lt;issuer&gt;/.well-known/openid-configuration</code> (fetched at
+first login, cached in-process for 1 hour) — you never configure token/authorize
+URLs by hand. Identity comes from the IdP's <code>userinfo</code> endpoint, so the IdP must
+publish one (all mainstream IdPs do).</p>
+<p><strong>Routes:</strong> <code>GET /login/oidc</code>, <code>GET /login/oidc/authorized</code>.</p>
+<p><strong>IdP-side setup:</strong></p>
+<ol>
+<li>Register a confidential <strong>Web</strong> client (authorization-code grant).</li>
+<li>Redirect/callback URI: <code>https://&lt;your-mindrouter-host&gt;/login/oidc/authorized</code>.</li>
+<li>Ensure the client can request scopes <code>openid profile email</code> (or adjust
+   <code>OIDC_SSO_SCOPES</code>).</li>
+</ol>
+<p><strong>MindRouter-side env vars:</strong></p>
+<pre><code class="language-bash">OIDC_SSO_ISSUER=https://idp.example.edu/realms/campus   # issuer base URL, no trailing slash needed
+OIDC_SSO_CLIENT_ID=&lt;client id&gt;
+OIDC_SSO_CLIENT_SECRET=&lt;client secret&gt;
+# Optional — defaults to &lt;APP_BASE_URL&gt;/login/oidc/authorized:
+OIDC_SSO_REDIRECT_URI=https://&lt;your-mindrouter-host&gt;/login/oidc/authorized
+OIDC_SSO_DISPLAY_NAME=Okta          # login button reads &quot;Sign in with &lt;this&gt;&quot;
+OIDC_SSO_SCOPES=&quot;openid profile email&quot;
+OIDC_SSO_DEFAULT_GROUP=other
+</code></pre>
+<p>Claims used: <code>sub</code> (stable subject), <code>email</code> (required; rejected if
+<code>email_verified</code> is present and not true — string forms like <code>"false"</code> count as unverified), <code>name</code> (display name),
+<code>preferred_username</code> (username hint for the generated local username).</p>
+            </section>
+
+            <hr>
+            <section id="incommon-via-cilogon-recommended-incommon-path">
+                <h2>InCommon via CILogon (recommended InCommon path)</h2>
+<p>MindRouter's recommended way to accept <strong>InCommon federation</strong> logins
+(university Shibboleth accounts nationwide) is <strong>CILogon</strong>, which acts as an
+OIDC gateway in front of the whole federation. You configure MindRouter's
+generic OIDC provider against CILogon — no SAML metadata exchange, no
+per-campus registration:</p>
+<ol>
+<li>Register an OIDC client at <strong>cilogon.org</strong> (CILogon client registration).
+   Callback URL: <code>https://&lt;your-mindrouter-host&gt;/login/oidc/authorized</code>.</li>
+<li>Configure:</li>
+</ol>
+<pre><code class="language-bash">OIDC_SSO_ISSUER=https://cilogon.org
+OIDC_SSO_CLIENT_ID=cilogon:/client_id/&lt;...&gt;
+OIDC_SSO_CLIENT_SECRET=&lt;secret&gt;
+OIDC_SSO_DISPLAY_NAME=InCommon
+OIDC_SSO_DEFAULT_GROUP=other
+</code></pre>
+<p>Users pick their home institution on the CILogon page, authenticate at their
+campus IdP, and come back with standard OIDC claims (<code>sub</code> is a stable
+<code>http://cilogon.org/serverA/users/...</code> identifier). If you need direct SAML to a
+single campus IdP instead, use the native SAML provider below.</p>
+            </section>
+
+            <hr>
+            <section id="native-saml-20-shibboleth-idp-adfs">
+                <h2>Native SAML 2.0 (Shibboleth IdP, ADFS)</h2>
+<p>A single-IdP SAML SP built on <strong>python3-saml</strong>, for deployments that must speak
+SAML directly (campus Shibboleth IdP, ADFS) rather than going through CILogon.</p>
+<p><strong>Routes:</strong></p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Route</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /login/saml</code></td>
+<td>SP-initiated AuthnRequest redirect to the IdP (HTTP-Redirect binding)</td>
+</tr>
+<tr>
+<td><code>POST /login/saml/acs</code></td>
+<td>Assertion Consumer Service (HTTP-POST binding)</td>
+</tr>
+<tr>
+<td><code>GET /saml/metadata</code></td>
+<td>SP metadata XML — give this URL (or its output) to the IdP admin</td>
+</tr>
+</tbody>
+</table>
+<p><strong>SP characteristics</strong> (from <code>build_saml_settings()</code>): strict mode, assertions
+must be signed (<code>wantAssertionsSigned: true</code>) while a message-level signature is
+<strong>not</strong> required (<code>wantMessagesSigned: false</code>), requested NameID format is
+<code>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</code>. The request adapter
+derives scheme and host from <code>APP_BASE_URL</code> rather than from
+<code>X-Forwarded-Proto</code> / <code>X-Forwarded-Host</code> — precisely so a client-supplied
+forwarded host cannot relax the Destination/Recipient validation that
+python3-saml performs against that value. (It falls back to the request scheme
+and <code>Host</code> header only when <code>APP_BASE_URL</code> is blank, which is why you should
+keep it set behind the nginx proxy.)</p>
+<p><strong>IdP-side setup:</strong></p>
+<ol>
+<li>Register MindRouter as an SP using the metadata served at
+   <code>https://&lt;your-mindrouter-host&gt;/saml/metadata</code>.</li>
+<li>Release attributes: <code>mail</code>, <code>displayName</code>, <code>eduPersonPrincipalName</code> (or
+   whatever you map via <code>SAML_ATTR_*</code> below). An email-format NameID also works
+   as a fallback for the email (common with ADFS).</li>
+</ol>
+<p><strong>MindRouter-side env vars — metadata-URL style (typical Shibboleth):</strong></p>
+<pre><code class="language-bash">SAML_SP_ENTITY_ID=https://&lt;your-mindrouter-host&gt;/saml/metadata
+SAML_IDP_METADATA_URL=https://idp.example.edu/idp/shibboleth
+</code></pre>
+<p><strong>— or explicit style (no metadata URL available):</strong></p>
+<pre><code class="language-bash">SAML_SP_ENTITY_ID=https://&lt;your-mindrouter-host&gt;/saml/metadata
+SAML_IDP_ENTITY_ID=https://idp.example.edu/idp/shibboleth
+SAML_IDP_SSO_URL=https://idp.example.edu/idp/profile/SAML2/Redirect/SSO
+SAML_IDP_X509_CERT=&quot;MIIC...single-line base64, no PEM headers...&quot;
+</code></pre>
+<p><strong>Optional:</strong></p>
+<pre><code class="language-bash"># Defaults to &lt;APP_BASE_URL&gt;/login/saml/acs when unset:
+SAML_SP_ACS_URL=https://&lt;your-mindrouter-host&gt;/login/saml/acs
+SAML_DISPLAY_NAME=Example University
+SAML_DEFAULT_GROUP=other
+# Attribute mapping (defaults are eduPerson conventions):
+SAML_ATTR_EMAIL=mail
+SAML_ATTR_NAME=displayName
+SAML_ATTR_USERNAME=eduPersonPrincipalName
+</code></pre>
+<p>Subject selection for account keying: persistent NameID if the IdP sends one,
+else the <code>SAML_ATTR_USERNAME</code> attribute (ePPN), else the email.</p>
+<p><strong>Configure your IdP to release a persistent (or otherwise stable) NameID.</strong>
+MindRouter asks for
+<code>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</code> in its AuthnRequest but
+does <strong>not</strong> verify the format it gets back, so an IdP configured for
+<strong>transient</strong> NameIDs will hand MindRouter a new subject on every login. The
+consequence is a one-login lockout: the first login provisions the account and
+stamps <code>sso_provider</code>; the second login misses on subject, falls through to the
+email match, sees <code>sso_provider</code> already set, and is <strong>refused</strong> permanently
+(<code>sso_email_link_refused</code>). Clearing the stale identity requires editing the
+<code>users</code> row directly in the database — there is no admin UI or API for it. If
+your IdP cannot emit a persistent NameID, release a stable
+<code>eduPersonPrincipalName</code> and suppress the NameID.</p>
+<p><strong>SAML requires HTTPS.</strong> The <code>saml_request_id</code> cookie that carries the
+AuthnRequest ID is set <code>SameSite=None; Secure</code>, because the IdP returns the
+assertion by a <strong>cross-site HTTP-POST</strong> to the ACS and browsers withhold
+<code>SameSite=Lax</code> cookies on cross-site POSTs. A <code>Secure</code> cookie is not stored
+over plain <code>http</code>, so SAML cannot be exercised against a plain-http dev URL —
+the ACS will reject every response as unsolicited. Test SAML against a TLS
+origin.</p>
+<p><strong>Dependency note:</strong> python3-saml and its xmlsec system libraries <strong>ship in the
+Docker image</strong> (<code>Dockerfile</code> installs <code>libxmlsec1-dev</code> + <code>libxmlsec1-openssl</code>
+and runs <code>pip install -e .[saml]</code>). Bare-metal installs need
+<code>apt install libxmlsec1-dev libxmlsec1-openssl</code> then <code>pip install .[saml]</code>.
+Without it, SAML routes fail gracefully with a "SAML support is not installed"
+error; the other providers are unaffected (the import is lazy). <code>GET
+/saml/metadata</code> returns <strong>404</strong> (<code>SAML is not configured</code>) when the SAML env
+vars above are unset, and <strong>501</strong> (<code>SAML support is not installed</code>) when
+python3-saml is absent — but do <strong>not</strong> rely on the status code to tell the two
+apart. <code>metadata_response()</code> builds the SAML settings first, and in the common
+metadata-URL setup that build needs the python3-saml metadata parser: with
+<code>SAML_IDP_METADATA_URL</code> set and the library missing, settings construction
+fails and you get <strong>404</strong>, not 501. The 501 is only reliably reached in the
+explicit entity-id / SSO-URL / cert configuration. Confirm the library
+directly (<code>python -c "import onelogin.saml2"</code>) rather than inferring it from
+the response code.</p>
+            </section>
+
+            <hr>
+            <section id="jit-provisioning-and-account-linking">
+                <h2>JIT provisioning and account linking</h2>
+<p>All providers share the same semantics (<code>find_or_create_sso_user()</code> in
+<code>sso/base.py</code>; the Azure driver implements the same logic with <code>azure_oid</code>):</p>
+<ol>
+<li><strong>Lookup by <code>(provider, subject)</code> first</strong> — the stable IdP identifier
+   (OIDC <code>sub</code>, SAML persistent NameID, Azure object ID) stored on the user row.</li>
+<li><strong>Then lookup by email</strong> (lowercased), but <strong>only unclaimed accounts are
+   adopted</strong>. If the matched account already carries <strong>any</strong> IdP identity —
+   <code>azure_oid</code> set, or <code>sso_provider</code> set to <em>anything</em>, including the same
+   provider — the login is <strong>refused</strong> and an <code>sso_email_link_refused</code> warning
+   is logged. Email is an IdP-supplied attribute, not proof of ownership —
+   without this rule, any enabled IdP could assert an existing user's address
+   (including an admin's) and inherit that account.</li>
+</ol>
+<p>Because the refusal keys on <code>sso_provider</code> being set at all — not on it
+   being a <em>different</em> provider — <strong>an IdP that rotates its subject locks the
+   user out after one login</strong>: the second login misses on <code>(provider, subject)</code>,
+   matches by email, sees <code>sso_provider</code> already set, and is refused. So the
+   IdP must emit a <strong>stable</strong> subject: a persistent NameID for SAML (MindRouter
+   requests <code>nameid-format:persistent</code> but does not verify what comes back), a
+   stable <code>sub</code> for OIDC.</p>
+<p>Unclaimed accounts — notably <strong>local username/password accounts</strong> — are
+   linked: the SSO identity is attached and <strong>the local password is kept</strong>, so
+   the user can continue to log in either way. Display name is refreshed from
+   the IdP on every login; <strong>department and college are refreshed for Azure
+   only</strong> — <code>profile_from_claims()</code> (OIDC/Google) and <code>profile_from_assertion()</code>
+   (SAML) never populate those fields, so they stay empty for those providers.</p>
+<p>Moving a user between providers, or clearing a stale identity after a
+   subject rotation, means editing <code>azure_oid</code> / <code>sso_provider</code> / <code>sso_subject</code>
+   on the <code>users</code> row <strong>directly in the database</strong>. There is no admin UI or API
+   for it.
+3. <strong>Otherwise, a new user is created:</strong>
+   - Username = local part of the username hint (ePPN /
+     <code>preferred_username</code>) or email; on collision, <code>_&lt;first 8 chars of subject&gt;</code>
+     is appended.
+   - No password hash. The account is SSO-only: it has no local password and
+     cannot use the local login form. There is currently <strong>no admin UI or API
+     to add one</strong> — <code>/dashboard/change-password</code> returns early when
+     <code>password_hash</code> is NULL, and the admin user-update endpoint has no password
+     field. A local credential means creating a separate local account (admin →
+     <strong>Users</strong> → <em>Create Local User</em>) or setting the hash directly in the
+     database.
+   - Group = the provider's <code>*_DEFAULT_GROUP</code> setting (default <code>other</code>).
+     <strong>The group must already exist</strong> — create it on the admin <strong>Groups</strong> page
+     first. If the named group does not exist, the user is created with no
+     group and <strong>no quota row</strong>, so keep this pointed at a real group.
+   - <strong>Quota is seeded from the group</strong> (<code>rpm_limit</code> copied from the group's
+     defaults).</p>
+<p>Deactivated accounts (<code>is_active = false</code>) are refused at login regardless of
+provider.</p>
+            </section>
+
+            <hr>
+            <section id="login-button-labels-branding-tie-in">
+                <h2>Login button labels (branding tie-in)</h2>
+<p>Button labels come from <code>enabled_providers()</code> in <code>sso/registry.py</code> and tie into
+<strong>Admin → Branding → "Institution / organization name"</strong> (<code>branding.org_name</code>):</p>
+<ul>
+<li><strong>Azure AD</strong> is treated as the primary/institutional provider: its button is
+  labeled with the branding org name (e.g. "Sign in with University of Idaho");
+  falls back to "SSO" when no org name is set.</li>
+<li><strong>SAML</strong> uses the org name when Azure is not enabled and <code>SAML_DISPLAY_NAME</code>
+  is left at its default <code>SSO</code>; otherwise it shows <code>SAML_DISPLAY_NAME</code>.</li>
+<li><strong>Generic OIDC</strong> uses the org name when it is the first enabled provider and
+  <code>OIDC_SSO_DISPLAY_NAME</code> is left at its default <code>SSO</code>; otherwise it shows
+  <code>OIDC_SSO_DISPLAY_NAME</code>.</li>
+<li><strong>Google</strong> is always labeled "Google".</li>
+</ul>
+<p>Practical rule: for your institutional IdP, set the org name in Admin →
+Branding and leave <code>*_DISPLAY_NAME</code> alone; for secondary providers, set an
+explicit <code>OIDC_SSO_DISPLAY_NAME</code> / <code>SAML_DISPLAY_NAME</code>.</p>
+            </section>
+
+            <hr>
+            <section id="environment-variable-reference">
+                <h2>Environment variable reference</h2>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Required?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AZURE_AD_CLIENT_ID</code></td>
+<td>–</td>
+<td>Required for Azure</td>
+</tr>
+<tr>
+<td><code>AZURE_AD_CLIENT_SECRET</code></td>
+<td>–</td>
+<td>Required for Azure</td>
+</tr>
+<tr>
+<td><code>AZURE_AD_TENANT_ID</code></td>
+<td>–</td>
+<td>Required for Azure</td>
+</tr>
+<tr>
+<td><code>AZURE_AD_REDIRECT_URI</code></td>
+<td><code>https://your-domain.example.com/login/azure/authorized</code> (placeholder)</td>
+<td>Required for Azure (absolute URL)</td>
+</tr>
+<tr>
+<td><code>AZURE_AD_DEFAULT_GROUP</code></td>
+<td><code>other</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SSO_CLIENT_ID</code></td>
+<td>–</td>
+<td>Required for Google</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SSO_CLIENT_SECRET</code></td>
+<td>–</td>
+<td>Required for Google</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SSO_REDIRECT_URI</code></td>
+<td><code>&lt;APP_BASE_URL&gt;/login/google/authorized</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SSO_HOSTED_DOMAIN</code></td>
+<td>–</td>
+<td>Optional (restricts to a Workspace domain)</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SSO_DEFAULT_GROUP</code></td>
+<td><code>other</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_ISSUER</code></td>
+<td>–</td>
+<td>Required for OIDC</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_CLIENT_ID</code></td>
+<td>–</td>
+<td>Required for OIDC</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_CLIENT_SECRET</code></td>
+<td>–</td>
+<td>Required for OIDC</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_REDIRECT_URI</code></td>
+<td><code>&lt;APP_BASE_URL&gt;/login/oidc/authorized</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_DISPLAY_NAME</code></td>
+<td><code>SSO</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_SCOPES</code></td>
+<td><code>openid profile email</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>OIDC_SSO_DEFAULT_GROUP</code></td>
+<td><code>other</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_SP_ENTITY_ID</code></td>
+<td>–</td>
+<td>Required for SAML</td>
+</tr>
+<tr>
+<td><code>SAML_SP_ACS_URL</code></td>
+<td><code>&lt;APP_BASE_URL&gt;/login/saml/acs</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_IDP_METADATA_URL</code></td>
+<td>–</td>
+<td>Required for SAML unless the explicit trio below is set</td>
+</tr>
+<tr>
+<td><code>SAML_IDP_ENTITY_ID</code></td>
+<td>–</td>
+<td>Required if no metadata URL</td>
+</tr>
+<tr>
+<td><code>SAML_IDP_SSO_URL</code></td>
+<td>–</td>
+<td>Required if no metadata URL</td>
+</tr>
+<tr>
+<td><code>SAML_IDP_X509_CERT</code></td>
+<td>–</td>
+<td>Required if no metadata URL</td>
+</tr>
+<tr>
+<td><code>SAML_DISPLAY_NAME</code></td>
+<td><code>SSO</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_DEFAULT_GROUP</code></td>
+<td><code>other</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_ATTR_EMAIL</code></td>
+<td><code>mail</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_ATTR_NAME</code></td>
+<td><code>displayName</code></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>SAML_ATTR_USERNAME</code></td>
+<td><code>eduPersonPrincipalName</code></td>
+<td>Optional</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note on <code>AZURE_AD_REDIRECT_URI</code>:</strong> in a Docker Compose deployment you must set
+it explicitly. Compose passes it as <code>${AZURE_AD_REDIRECT_URI:-}</code>, so an unset
+variable arrives in the container as an <strong>empty string</strong> — the placeholder
+default in <code>settings.py</code> never applies, and the Azure flow will fail with a
+redirect-URI mismatch.</p>
+            </section>
+
+            <hr>
+            <section id="deployment-reminder">
+                <h2>Deployment reminder</h2>
+<p>The app reads settings from the <strong>container</strong> environment. How values get there
+depends on which Compose stack the deployment runs, and the two stacks in this
+repo do it differently — check which one you are on before editing anything:</p>
+<table class="table table-bordered table-sm">
+<thead>
+<tr>
+<th>Stack</th>
+<th>Put values in</th>
+<th>How they reach the container</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docker-compose.yml</code> (host-networked stack; what a bare <code>docker compose</code> command starts)</td>
+<td><code>/opt/mindrouter/.env</code> on the host</td>
+<td>Compose interpolates <code>${VAR:-}</code> into the service's <code>environment:</code> block. Every variable in the table above — including <code>AZURE_AD_DEFAULT_GROUP</code> — is <strong>already wired through</strong>, so setting it in the env file is enough.</td>
+</tr>
+<tr>
+<td><code>docker-compose.prod.yml</code> (nginx/TLS stack; see <a href="../deploy/DEPLOYMENT.md">../deploy/DEPLOYMENT.md</a>)</td>
+<td><code>.env.prod</code> in the deployment directory</td>
+<td>The service declares <code>env_file:</code>, so the file is handed to the container wholesale. Any variable you add is picked up as-is.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>No compose edit is needed for the variables in the table above</strong> on either
+  stack. If you add a variable that is <em>not</em> listed there and you run the
+  <code>docker-compose.yml</code> stack, add a matching <code>- NEW_VAR=${NEW_VAR:-}</code> line to its
+  <code>environment:</code> block; the <code>env_file:</code> stack needs no such edit.</li>
+<li><strong>Secrets stay on the host.</strong> <code>.env</code> / <code>.env.prod</code> are never committed — no
+  client secrets, no certificates, no private keys in the repo.</li>
+<li><strong>Restart with the same Compose file the deployment was started with.</strong>
+  Settings are cached per process (see Overview), so a recreate is required:</li>
+</ul>
+<p>```bash
+  # docker-compose.yml stack
+  docker compose up -d</p>
+<p># docker-compose.prod.yml stack
+  docker compose -f docker-compose.prod.yml up -d
+  ```</p>
+<p>These are not interchangeable. Running the bare command on a host started with
+  <code>-f docker-compose.prod.yml</code> does not reload your SSO settings — it starts the
+  <em>other</em> stack alongside the running one.
+- <strong><code>APP_BASE_URL</code> must name this deployment's own public HTTPS origin</strong> before
+  any provider will work; redirect URIs and the SAML <code>Destination</code> check are
+  derived from it. It has a non-empty default, so a stale value produces a
+  plausible-looking config that fails only at the IdP. See the Security notes
+  below.</p>
+            </section>
+
+            <hr>
+            <section id="security-notes">
+                <h2>Security notes</h2>
+<p>Behavior enforced by the shared framework (see <code>sso/base.py</code>, <code>sso/oidc.py</code>,
+<code>sso/saml.py</code>):</p>
+<ul>
+<li><strong>Email linking only adopts unclaimed accounts.</strong> A login is refused (logged
+  as <code>sso_email_link_refused</code>) when the email matches an account already bound
+  to any identity provider. Prevents a second enabled IdP from asserting an
+  existing user's address — including an admin's — and inheriting the account.
+  Since 2.9.0 the Azure driver enforces this too.</li>
+<li><strong>Unverified emails are rejected</strong> for OIDC/Google <strong>when the IdP sends
+  <code>email_verified</code> and it is not true</strong>; IdPs that omit the claim entirely are
+  trusted. The claim is normalized, so string forms (<code>"false"</code>, <code>"0"</code>) do not
+  pass.</li>
+<li><strong>CSRF state</strong> is a signed, timed token (10 min) round-tripped through an
+  HttpOnly cookie, checked on every OIDC callback.</li>
+<li><strong>SAML is SP-initiated only.</strong> The ACS requires a signed <code>saml_request_id</code>
+  cookie from <code>/login/saml</code> and requires the response's <code>InResponseTo</code> to echo
+  that AuthnRequest ID, so unsolicited IdP-initiated POSTs to the ACS are
+  refused. (This is enforced in MindRouter, not by a library setting —
+  python3-saml has no unsolicited-response option, and it skips its own
+  <code>InResponseTo</code> comparison when the response omits the attribute.)
+  <code>rejectDeprecatedAlgorithm</code> blocks SHA-1 signatures, and assertions must be
+  signed (<code>strict</code> mode). That cookie is <code>SameSite=None; Secure</code> so it survives
+  the IdP's cross-site POST to the ACS, which makes <strong>HTTPS a hard requirement
+  for SAML</strong>. Note: IdP-initiated login (e.g. launching MindRouter from a
+  campus app portal tile) is therefore not supported — users must start at the
+  MindRouter login page.</li>
+<li><strong>SAML IdP metadata must be served over HTTPS</strong> — it carries the signing
+  certificate, the only trust anchor for assertion validation. A plain-<code>http</code>
+  <code>SAML_IDP_METADATA_URL</code> disables the provider. For a stronger anchor, pin the
+  certificate locally with <code>SAML_IDP_ENTITY_ID</code> / <code>SAML_IDP_SSO_URL</code> /
+  <code>SAML_IDP_X509_CERT</code> instead of fetching metadata.</li>
+<li><strong>Public URLs are derived from <code>APP_BASE_URL</code> rather than from request
+  headers — keep <code>APP_BASE_URL</code> set.</strong> OIDC redirect URIs and the SAML
+  Destination/Recipient check are built from the configured base URL, so a
+  spoofed <code>X-Forwarded-Host</code> cannot influence them. If <code>APP_BASE_URL</code> is blank
+  the code falls back to the request's own scheme/Host headers — the OIDC path
+  reads <code>X-Forwarded-Proto</code> (<code>sso/oidc.py</code>), while the SAML request adapter
+  uses <code>request.url.scheme</code> plus the <code>Host</code> header and never consults
+  <code>X-Forwarded-Proto</code> (<code>sso/saml.py</code>), so behind a TLS-terminating proxy a
+  blank <code>APP_BASE_URL</code> yields an <code>http</code> SAML Destination. Which is exactly why
+  leaving it set matters. Point it at your public HTTPS origin.</li>
+<li><strong>What the IdP must sign (SAML):</strong> the <strong>assertion</strong>
+  (<code>wantAssertionsSigned: true</code>). A message-level signature on the SAML
+  <code>&lt;Response&gt;</code> is <strong>not</strong> required (<code>wantMessagesSigned: false</code>), so IdP admins
+  only need to enable assertion signing.</li>
+<li><strong><code>SECRET_KEY</code> underpins the SSO handshake.</strong> The signed OIDC <code>state</code> cookie
+  and the SAML <code>saml_request_id</code> cookie are both signed with it
+  (<code>state_serializer()</code> in <code>sso/base.py</code>). A weak or leaked <code>SECRET_KEY</code>
+  therefore weakens OIDC CSRF protection and SAML SP-initiated-only
+  enforcement; rotating it invalidates any login already in flight.</li>
+</ul>
+            </section>
+
+            <hr>
+        </div>
+    </div>
+</div>
+    </main>
+    <footer class="site-footer py-4">
+        <div class="container text-center">
+            <p class="mb-2" style="font-size:1.1rem; font-weight:600;">
+                <i class="bi bi-router" style="color:var(--mindrouter-primary);"></i> MindRouter
+            </p>
+            <p class="text-muted mb-2" style="font-size:0.82rem;">
+                <a href="https://github.com/ui-insight/MindRouter" class="text-muted"><i class="bi bi-github"></i> GitHub</a>
+                &nbsp;&middot;&nbsp; Apache 2.0 License
+            </p>
+            <p class="text-muted mb-2 mx-auto" style="font-size:0.78rem; max-width:760px; line-height:1.7;">
+                Sheneman, L. (2026). <em>MindRouter: Open-source LLM inference gateway for institutional AI sovereignty.</em>
+                PEARC&nbsp;&rsquo;26. Association for Computing Machinery.
+                <a href="https://doi.org/10.1145/3785462.3815861" class="text-muted" target="_blank" rel="noopener">doi:10.1145/3785462.3815861</a>
+            </p>
+            <div class="mt-3">
+                <a href="https://www.uidaho.edu" target="_blank" rel="noopener"><img src="/img/uidaho-logo.png" alt="University of Idaho" class="uidaho-logo"></a>
+            </div>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        // Highlight the sidebar link for the section currently in view
+        const sections = document.querySelectorAll('.docs-content section[id]');
+        const tocLinks = document.querySelectorAll('.docs-sidebar .nav-link');
+        if (!sections.length || !tocLinks.length) return;
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(function(link) { link.classList.remove('active'); });
+                    const active = document.querySelector('.docs-sidebar a[href="#' + entry.target.id + '"]');
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -80% 0px' });
+        sections.forEach(function(section) { observer.observe(section); });
+    })();
+    </script>
+    <script>
+    (function() {
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function updateIcon() {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            if (icon) icon.className = isDark ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+        updateIcon();
+        btn.addEventListener('click', function() {
+            var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('mr-theme', next);
+            updateIcon();
+        });
+    })();
+    </script>
+</body>
+</html>

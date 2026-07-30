@@ -142,8 +142,20 @@ audit log (<code>branding.*</code> actions).</p>
 <td>Top navbar, browser tab titles, footer</td>
 </tr>
 <tr>
+<td>Institution / organization name</td>
+<td>Login page SSO button ("Sign in with …") and the SSO helper text</td>
+</tr>
+<tr>
 <td>Tagline</td>
 <td>Footer, beside the name</td>
+</tr>
+<tr>
+<td>Footer attribution</td>
+<td>Small credit line in the footer of <strong>every</strong> page, including the public login and status pages ("Powered by …"). Clear it to remove the line entirely.</td>
+</tr>
+<tr>
+<td>Footer attribution link</td>
+<td>Optional link target for the attribution text (<code>http://</code>, <code>https://</code>, or a site-relative <code>/path</code>); blank renders plain text</td>
 </tr>
 <tr>
 <td>Accent color — light theme</td>
@@ -171,6 +183,44 @@ audit log (<code>branding.*</code> actions).</p>
 </tr>
 </tbody>
 </table>
+<h3 id="app-name-vs-institution-name">App name vs. institution name</h3>
+<p>The first two rows are <strong>two different fields</strong> and are easy to confuse:</p>
+<ul>
+<li><strong>Organization / app name</strong> (<code>branding.app_name</code>, max 80 chars) is the
+  <em>product</em> name — what this software is called in the navbar, browser tab
+  titles, and footer.</li>
+<li><strong>Institution / organization name</strong> (<code>branding.org_name</code>, optional, max 120
+  chars, added in 2.8.48) is the <em>institution running the deployment</em>. It
+  supplies the sign-in wording: the SSO button reads "Sign in with University of
+  Idaho" and the helper text below it reads "Use your University of Idaho
+  credentials to sign in." (It also names the provider in the default chat
+  assistant system prompt and in the "this account has no local password" login
+  message.)</li>
+</ul>
+<p>Leave the institution name blank and the login page falls back to generic
+wording — <strong>"Sign in with SSO"</strong> and <strong>"Use your organization credentials to
+sign in."</strong> Which providers get the org-name label depends on which SSO
+providers are enabled; see
+<a href="/docs/sso-configuration.html#login-button-labels-branding-tie-in">SSO configuration → Login button labels</a>.</p>
+<h3 id="footer-attribution">Footer attribution</h3>
+<p>The footer carries a small credit line above the NSF award notice. Unlike the
+other fields it is <strong>not blank by default</strong>: MindRouter ships with
+<code>branding.footer_note</code> = <code>Powered by RCDS</code> and <code>branding.footer_note_url</code> =
+<code>https://hpc.example.com</code>, the operator credit for the reference deployment at
+the University of Idaho, so upgrading an existing install changes nothing.</p>
+<p>Any deployment can rewrite both fields (Admin → Branding → <em>Footer attribution</em>
+/ <em>Footer attribution link</em>, max 120 / 300 chars) or <strong>clear the text field to
+remove the line altogether</strong> — an explicitly-saved empty value is honored and
+is <em>not</em> replaced by the default. So a fresh install elsewhere shows
+"Powered by RCDS" until an admin changes or removes it; that is the one branding
+field a new operator should review before going live.</p>
+<p>The link is validated on save: only <code>http://</code>, <code>https://</code>, and site-relative
+<code>/path</code> targets are stored, and only such values are ever emitted into the
+<code>href</code> (so a stored value cannot become a <code>javascript:</code> URL). With no link set,
+the attribution renders as plain text.</p>
+<p>The NSF award credit beside it is <strong>product</strong> attribution for the grant that
+funded MindRouter, not deployment branding, and is intentionally not
+configurable.</p>
 <p>Logos appear in the <strong>navbar (header)</strong>, the <strong>footer</strong>, and the <strong>login card</strong>.
 The navbar always has a dark background, so it uses the dark-theme logo (falling
 back to the light one); the footer and login card follow the active theme and
@@ -179,7 +229,12 @@ swap between the two logo variants automatically.</p>
 card in both light and dark themes, updating as you pick colors. Nothing is
 applied site-wide until you click <strong>Save</strong>.</p>
 <p>Use <strong>Reset to defaults</strong> to restore the stock MindRouter name, colors, and
-remove all uploaded assets.</p>
+remove all uploaded assets. It clears the institution name too, so the login
+page returns to generic SSO wording. An install with no branding configured
+looks the same way: stock name and colors, no logo on the login card,
+"Sign in with SSO" / "Use your organization credentials to sign in." — and the
+default "Powered by RCDS" footer attribution, since reset restores shipped
+defaults rather than blanking every field.</p>
             </section>
 
             <hr>

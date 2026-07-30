@@ -69,6 +69,8 @@ PAGES = [
     {"src": "docs/architecture.md", "out": "docs/architecture.html", "title": "Architecture"},
     {"src": "docs/scheduler.md", "out": "docs/scheduler.html", "title": "Scheduler"},
     {"src": "docs/branding.md", "out": "docs/branding.html", "title": "Branding & Theming"},
+    {"src": "docs/sso-configuration.md", "out": "docs/sso-configuration.html",
+     "title": "SSO Configuration"},
 ]
 LINK_MAP = {Path(p["src"]).name: ("/" + p["out"]) for p in PAGES}
 LINK_MAP["index.md"] = "/documentation.html"
